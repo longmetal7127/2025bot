@@ -9,10 +9,8 @@ import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveDriveOdometry;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
-import edu.wpi.first.wpilibj.ADIS16470_IMU;
-import edu.wpi.first.wpilibj.ADIS16470_IMU.IMUAxis;
-import edu.wpi.first.wpilibj.SPI;
 import frc.robot.configs.Swerve.DriveConstants;
+import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 public class DriveTrain extends SubsystemBase {
@@ -94,6 +92,12 @@ public class DriveTrain extends SubsystemBase {
         pose);
   }
 
+  public Command cmdResetOdometry(Pose2d pose) {
+    return this.run(() -> {
+      resetOdometry(pose);
+    });
+  }
+
   /**
    * Method to drive the robot using joystick info.
    *
@@ -167,13 +171,28 @@ public class DriveTrain extends SubsystemBase {
   public double getHeading() {
     return m_gyro.getRotation2d().getDegrees();
   }
+    /**
+   * Returns the current ChassisSpeeds
+   *
+   * @return the current chassis speeds
+   */
+  public ChassisSpeeds getChassisSpeeds() {
+    return DriveConstants.kDriveKinematics.toChassisSpeeds(
+        m_frontLeft.getState(),
+        m_frontRight.getState(),
+        m_rearLeft.getState(),
+        m_rearRight.getState());
+  }
 
   /**
-   * Returns the turn rate of the robot.
+   * Sets each module to the respective chassis speed
    *
-   * @return The turn rate of the robot, in degrees per second
+   * @param speeds Desired ChassisSpeeds object
    */
-  public double getTurnRate() {
-    return m_gyro.getRate() * (DriveConstants.kGyroReversed ? -1.0 : 1.0);
+  public void setChassisSpeeds(ChassisSpeeds speeds) {
+    var swerveModuleStates = DriveConstants.kDriveKinematics.toSwerveModuleStates(speeds);
+    setModuleStates(swerveModuleStates);
   }
+
+
 }
