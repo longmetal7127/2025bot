@@ -12,6 +12,7 @@ import choreo.auto.AutoLoop;
 
 import choreo.auto.AutoTrajectory;
 import choreo.auto.AutoChooser.AutoRoutineGenerator;
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
@@ -19,6 +20,11 @@ import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.RunCommand;
+import edu.wpi.first.wpilibj2.command.button.CommandJoystick;
+import frc.robot.configs.Constants;
+import frc.robot.configs.Swerve;
+import frc.robot.configs.Constants.OperatorConstants;
 import frc.robot.subsystems.DriveTrain;
 
 /**
@@ -42,6 +48,8 @@ public class Robot extends TimedRobot {
       },
       new AutoBindings());
   private AutoChooser autoChooser;
+  public static CommandJoystick joystick = new CommandJoystick(
+      Constants.OperatorConstants.kDriverJoystickPort);
 
   /**
    * This function is run when the robot is first started up and should be used
@@ -53,6 +61,24 @@ public class Robot extends TimedRobot {
     configureBindings();
     autoChooser = new AutoChooser(autoFactory, "");
     autoChooser.addAutoRoutine("auto", this::auto);
+    driveTrain.setDefaultCommand(
+        new RunCommand(
+            () -> {
+              double multiplier = (((joystick.getThrottle() * -1) + 1) / 2); // turbo mode
+              double z = joystick.getZ() * -.9;
+
+              driveTrain.drive(
+                  MathUtil.applyDeadband(
+                      joystick.getY() * -multiplier,
+                      OperatorConstants.kDriveDeadband),
+                  MathUtil.applyDeadband(
+                      joystick.getX() * -multiplier,
+                      OperatorConstants.kDriveDeadband),
+                  MathUtil.applyDeadband(z, OperatorConstants.kDriveDeadband),
+                  true);
+            },
+            driveTrain));
+
   }
 
   public void configureBindings() {
