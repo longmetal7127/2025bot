@@ -12,6 +12,8 @@ import choreo.auto.AutoLoop;
 
 import choreo.auto.AutoTrajectory;
 import choreo.auto.AutoChooser.AutoRoutineGenerator;
+import edu.wpi.first.epilogue.Epilogue;
+import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -26,7 +28,6 @@ import frc.robot.configs.Constants;
 import frc.robot.configs.Swerve;
 import frc.robot.configs.Constants.OperatorConstants;
 import frc.robot.subsystems.DriveTrain;
-
 /**
  * The VM is configured to automatically run this class, and to call the
  * functions corresponding to
@@ -36,6 +37,7 @@ import frc.robot.subsystems.DriveTrain;
  * build.gradle file in the
  * project.
  */
+@Logged
 public class Robot extends TimedRobot {
   private Command m_autonomousCommand;
   private DriveTrain driveTrain = new DriveTrain();
@@ -56,8 +58,7 @@ public class Robot extends TimedRobot {
    * for any
    * initialization code.
    */
-  @Override
-  public void robotInit() {
+  public Robot() {
     configureBindings();
     autoChooser = new AutoChooser(autoFactory, "");
     autoChooser.addAutoRoutine("auto", this::auto);
@@ -78,6 +79,7 @@ public class Robot extends TimedRobot {
                   true);
             },
             driveTrain));
+            Epilogue.bind(this);
 
   }
 

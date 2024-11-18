@@ -2,6 +2,7 @@ package frc.robot.subsystems;
 
 import com.studica.frc.AHRS;
 
+import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
@@ -13,6 +14,7 @@ import frc.robot.configs.Swerve.DriveConstants;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
+@Logged
 public class DriveTrain extends SubsystemBase {
   // Create SwerveModules
   private final SwerveModule m_frontLeft = new SwerveModule(
