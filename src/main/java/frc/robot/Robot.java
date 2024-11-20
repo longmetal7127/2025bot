@@ -51,8 +51,6 @@ public class Robot extends TimedRobot {
   private Command m_autonomousCommand;
   private DriveTrain driveTrain = new DriveTrain();
 
-  
-
   private AutoFactory autoFactory = Choreo.createAutoFactory(
       driveTrain,
       driveTrain::getPose,
@@ -88,6 +86,7 @@ public class Robot extends TimedRobot {
               double x = joystick.getX();
               double y = joystick.getY();
 
+              //limiting x/y on keyboard
               if(keyboardDebug) {
                 x = Math.sin(Math.atan2(x,y))*Math.max(Math.abs(y),Math.abs(x));
                 y = Math.cos(Math.atan2(x,y))*Math.max(Math.abs(y),Math.abs(x));

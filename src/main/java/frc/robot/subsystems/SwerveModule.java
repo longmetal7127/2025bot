@@ -4,10 +4,7 @@ import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
-import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.wpilibj.RobotBase;
-import edu.wpi.first.wpilibj.simulation.DCMotorSim;
-import edu.wpi.first.wpilibj.simulation.EncoderSim;
 
 import com.revrobotics.spark.SparkClosedLoopController;
 import com.revrobotics.spark.SparkFlex;
@@ -19,11 +16,8 @@ import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.AbsoluteEncoder;
 import com.revrobotics.RelativeEncoder;
 import com.revrobotics.sim.SparkAbsoluteEncoderSim;
-import com.revrobotics.sim.SparkFlexSim;
-import com.revrobotics.sim.SparkMaxSim;
 import com.revrobotics.sim.SparkRelativeEncoderSim;
 
-import frc.robot.configs.Swerve;
 import frc.robot.configs.Swerve.ModuleConfigs;
 
 @Logged
@@ -40,10 +34,7 @@ public class SwerveModule {
   private double m_chassisAngularOffset = 0;
   private SwerveModuleState m_desiredState = new SwerveModuleState(0.0, new Rotation2d());
 
-  //sims
-  private SparkFlexSim m_drivingSparkSim;
-  private SparkMaxSim m_turningSparkSim;
-
+  //sim encoders
   public final SparkRelativeEncoderSim m_drivingEncoderSim;
   public final SparkAbsoluteEncoderSim m_turningEncoderSim;
 
@@ -77,9 +68,6 @@ public class SwerveModule {
     m_drivingEncoderSim = new SparkRelativeEncoderSim(m_drivingSpark);
     m_turningEncoderSim = new SparkAbsoluteEncoderSim(m_turningSpark);
 
-    m_drivingSparkSim = new SparkFlexSim(m_drivingSpark, DCMotor.getNeoVortex(1));
-    m_turningSparkSim = new SparkMaxSim(m_turningSpark,  DCMotor.getNeo550(1));
-
     m_desiredState.angle = new Rotation2d(m_turningEncoder.getPosition());
   }
 
@@ -91,21 +79,8 @@ public class SwerveModule {
   public SwerveModuleState getState() {
     // Apply chassis angular offset to the encoder position to get the position
     // relative to the chassis.
-    //System.out.println(m_turningEncoder.getPosition());
     return new SwerveModuleState(m_drivingEncoder.getVelocity(),
         new Rotation2d(m_turningEncoder.getPosition() - m_chassisAngularOffset));
-  }
-
-  //in rads
-  public SwerveModuleState getSimState(double angle) {
-    // Apply chassis angular offset to the encoder position to get the position
-    // relative to the chassis.
-    //System.out.println(m_chassisAngularOffset);
-    //System.out.println(m_turningEncoder.getPosition());
-    return new SwerveModuleState(
-        m_drivingEncoder.getVelocity(),
-        new Rotation2d(m_turningEncoder.getPosition() - m_chassisAngularOffset - angle)
-    );
   }
 
   /**
@@ -126,7 +101,7 @@ public class SwerveModule {
    *
    * @param desiredState Desired state with speed and angle.
    */
-  public void setDesiredState(SwerveModuleState desiredState,double rot) {
+  public void setDesiredState(SwerveModuleState desiredState) {
     // Apply chassis angular offset to the desired state.
     SwerveModuleState correctedDesiredState = new SwerveModuleState();
     correctedDesiredState.speedMetersPerSecond = desiredState.speedMetersPerSecond;
@@ -141,12 +116,10 @@ public class SwerveModule {
 
     m_desiredState = desiredState;
 
-    m_drivingEncoderSim.setVelocity(correctedDesiredState.speedMetersPerSecond);
-    m_turningEncoderSim.setPosition(correctedDesiredState.angle.getRadians());
-    
-
+    //setting encoder values in sim
     if (RobotBase.isSimulation()) {
-      
+      m_drivingEncoderSim.setVelocity(correctedDesiredState.speedMetersPerSecond);
+      m_turningEncoderSim.setPosition(correctedDesiredState.angle.getRadians());
     }
   }
 
@@ -155,17 +128,8 @@ public class SwerveModule {
     m_drivingEncoder.setPosition(0);
   }
 
-  public double getDriving() {
-    return m_drivingSpark.get();
-  }
-
-  public double getTurning() {
-    return m_drivingSpark.get();
-  }
-
+  // incrementing iterations of the sims
   public void incrementSim(double dt) {
     m_drivingEncoderSim.iterate(m_drivingEncoderSim.getVelocity(), dt);
-    m_turningEncoderSim.iterate(m_turningEncoderSim.getVelocity(), dt);
-
   }
 }
