@@ -4,6 +4,8 @@
 
 package frc.robot;
 
+import org.littletonrobotics.urcl.URCL;
+
 import choreo.Choreo;
 import choreo.auto.AutoChooser;
 import choreo.auto.AutoFactory;
@@ -16,6 +18,7 @@ import edu.wpi.first.epilogue.Epilogue;
 import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.TimedRobot;
@@ -28,6 +31,7 @@ import frc.robot.configs.Constants;
 import frc.robot.configs.Swerve;
 import frc.robot.configs.Constants.OperatorConstants;
 import frc.robot.subsystems.DriveTrain;
+
 /**
  * The VM is configured to automatically run this class, and to call the
  * functions corresponding to
@@ -59,6 +63,9 @@ public class Robot extends TimedRobot {
    * initialization code.
    */
   public Robot() {
+    DataLogManager.start();
+    URCL.start();
+
     configureBindings();
     autoChooser = new AutoChooser(autoFactory, "");
     autoChooser.addAutoRoutine("auto", this::auto);
@@ -79,7 +86,7 @@ public class Robot extends TimedRobot {
                   true);
             },
             driveTrain));
-            Epilogue.bind(this);
+    Epilogue.bind(this);
 
   }
 

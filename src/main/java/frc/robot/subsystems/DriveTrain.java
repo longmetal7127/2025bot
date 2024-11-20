@@ -51,6 +51,8 @@ public class DriveTrain extends SubsystemBase {
           m_rearRight.getPosition()
       });
 
+
+
   /** Creates a new DriveSubsystem. */
   public DriveTrain() {
   }
@@ -75,6 +77,11 @@ public class DriveTrain extends SubsystemBase {
    */
   public Pose2d getPose() {
     return m_odometry.getPoseMeters();
+  }
+
+  public SwerveModuleState[] getSwerveModuleStates() {
+    return new SwerveModuleState[] {
+        m_frontLeft.getState(), m_frontRight.getState(), m_rearLeft.getState(), m_rearRight.getState() };
   }
 
   /**
@@ -173,7 +180,8 @@ public class DriveTrain extends SubsystemBase {
   public double getHeading() {
     return m_gyro.getRotation2d().getDegrees();
   }
-    /**
+
+  /**
    * Returns the current ChassisSpeeds
    *
    * @return the current chassis speeds
@@ -195,6 +203,5 @@ public class DriveTrain extends SubsystemBase {
     var swerveModuleStates = DriveConstants.kDriveKinematics.toSwerveModuleStates(speeds);
     setModuleStates(swerveModuleStates);
   }
-
 
 }

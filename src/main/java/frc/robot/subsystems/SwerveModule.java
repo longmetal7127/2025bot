@@ -1,5 +1,6 @@
 package frc.robot.subsystems;
 
+import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
@@ -16,6 +17,7 @@ import com.revrobotics.RelativeEncoder;
 
 import frc.robot.configs.Swerve.ModuleConfigs;
 
+@Logged
 public class SwerveModule {
   private final SparkFlex m_drivingSpark;
   private final SparkMax m_turningSpark;
