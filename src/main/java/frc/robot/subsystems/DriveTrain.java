@@ -3,6 +3,8 @@ package frc.robot.subsystems;
 import com.studica.frc.AHRS;
 
 import edu.wpi.first.epilogue.Logged;
+import edu.wpi.first.hal.SimDouble;
+import edu.wpi.first.hal.simulation.SimDeviceDataJNI;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Twist2d;
@@ -42,10 +44,11 @@ public class DriveTrain extends SubsystemBase {
       DriveConstants.kRearRightDrivingCanId,
       DriveConstants.kRearRightTurningCanId,
       DriveConstants.kBackRightChassisAngularOffset);
-    
 
   // The gyro sensor
   public final AHRS m_gyro = new AHRS(AHRS.NavXComType.kMXP_SPI);
+  private int dev = SimDeviceDataJNI.getSimDeviceHandle("navX-Sensor[4]"); // TODO: figure out why this is a 4 and not 0 like in the docs
+  private SimDouble angle = new SimDouble(SimDeviceDataJNI.getSimValueHandle(dev, "Yaw"));
 
   // Odometry class for tracking robot pose
   SwerveDriveOdometry m_odometry = new SwerveDriveOdometry(
@@ -58,13 +61,12 @@ public class DriveTrain extends SubsystemBase {
           m_rearRight.getPosition()
       });
 
-
-  //sim field
+  // sim field
   private Field2d m_field = new Field2d();
 
   /** Creates a new DriveSubsystem. */
   public DriveTrain() {
-    //create field on smart dashboard
+    // create field on smart dashboard
     SmartDashboard.putData("Field", m_field);
   }
 
@@ -79,40 +81,36 @@ public class DriveTrain extends SubsystemBase {
       m_frontRight.incrementSim(dt);
       m_rearLeft.incrementSim(dt);
       m_rearRight.incrementSim(dt);
-      
-      //get velocities of x, y, and rot
+
+      // get velocities of x, y, and rot
       ChassisSpeeds speeds = Swerve.DriveConstants.kDriveKinematics.toChassisSpeeds(
-        new SwerveModuleState[] {
-          m_frontLeft.getState(), 
-          m_frontRight.getState(), 
-          m_rearLeft.getState(), 
-          m_rearRight.getState()
-        }
-      );
+          new SwerveModuleState[] {
+              m_frontLeft.getState(),
+              m_frontRight.getState(),
+              m_rearLeft.getState(),
+              m_rearRight.getState()
+          });
       m_odometry.resetPose(
           m_odometry.getPoseMeters().exp(
               new Twist2d(
-                  speeds.vxMetersPerSecond*dt,
-                  speeds.vyMetersPerSecond*dt,
-                  speeds.omegaRadiansPerSecond*dt)
-          )
-      );
+                  speeds.vxMetersPerSecond * dt,
+                  speeds.vyMetersPerSecond * dt,
+                  speeds.omegaRadiansPerSecond * dt)));
 
-      //update robot pose
+      // update robot pose
       m_field.setRobotPose(m_odometry.getPoseMeters());
+      angle.set(-m_odometry.getPoseMeters().getRotation().getDegrees());
     } else {
-      //update odemetry normally
+      // update odemetry normally
       m_odometry.update(
-        m_gyro.getRotation2d(),
-        new SwerveModulePosition[] {
-            m_frontLeft.getPosition(),
-            m_frontRight.getPosition(),
-            m_rearLeft.getPosition(),
-            m_rearRight.getPosition()
-        }
-      );
+          m_gyro.getRotation2d(),
+          new SwerveModulePosition[] {
+              m_frontLeft.getPosition(),
+              m_frontRight.getPosition(),
+              m_rearLeft.getPosition(),
+              m_rearRight.getPosition()
+          });
     }
-    
 
   }
 
@@ -168,19 +166,6 @@ public class DriveTrain extends SubsystemBase {
     double ySpeedDelivered = ySpeed * DriveConstants.kMaxSpeedMetersPerSecond;
     double rotDelivered = rot * DriveConstants.kMaxAngularSpeed;
 
-    if(Robot.isSimulation()) { //sim case (no gyro)
-      SwerveModuleState[] swerveModuleStates = DriveConstants.kDriveKinematics.toSwerveModuleStates(
-          fieldRelative
-              ? ChassisSpeeds.fromFieldRelativeSpeeds(xSpeedDelivered, ySpeedDelivered, rotDelivered,
-                  m_odometry.getPoseMeters().getRotation())
-              : new ChassisSpeeds(xSpeedDelivered, ySpeedDelivered, rotDelivered));
-      SwerveDriveKinematics.desaturateWheelSpeeds(
-          swerveModuleStates, DriveConstants.kMaxSpeedMetersPerSecond);
-          m_frontLeft.setDesiredState(swerveModuleStates[0]);
-          m_frontRight.setDesiredState(swerveModuleStates[1]);
-          m_rearLeft.setDesiredState(swerveModuleStates[2]);
-          m_rearRight.setDesiredState(swerveModuleStates[3]);
-    } else { //real case
       SwerveModuleState[] swerveModuleStates = DriveConstants.kDriveKinematics.toSwerveModuleStates(
           fieldRelative
               ? ChassisSpeeds.fromFieldRelativeSpeeds(xSpeedDelivered, ySpeedDelivered, rotDelivered,
@@ -188,13 +173,12 @@ public class DriveTrain extends SubsystemBase {
               : new ChassisSpeeds(xSpeedDelivered, ySpeedDelivered, rotDelivered));
       SwerveDriveKinematics.desaturateWheelSpeeds(
           swerveModuleStates, DriveConstants.kMaxSpeedMetersPerSecond);
-          m_frontLeft.setDesiredState(swerveModuleStates[0]);
-          m_frontRight.setDesiredState(swerveModuleStates[1]);
-          m_rearLeft.setDesiredState(swerveModuleStates[2]);
-          m_rearRight.setDesiredState(swerveModuleStates[3]);
-    }
+      m_frontLeft.setDesiredState(swerveModuleStates[0]);
+      m_frontRight.setDesiredState(swerveModuleStates[1]);
+      m_rearLeft.setDesiredState(swerveModuleStates[2]);
+      m_rearRight.setDesiredState(swerveModuleStates[3]);
     
-    
+
   }
 
   /**
@@ -266,18 +250,18 @@ public class DriveTrain extends SubsystemBase {
     setModuleStates(swerveModuleStates);
   }
 
-
 }
 
 /*
-public Pose2d[] getSwerveModulePoses(Pose2d robotPose) {
-  Pose2d[]     poseArr = new Pose2d[swerveDriveConfiguration.moduleCount];
-  List<Pose2d> poses   = new ArrayList<>();
-  for (SwerveModule module : swerveModules) {
-    poses.add(
-        robotPose.plus(
-            new Transform2d(module.configuration.moduleLocation, module.getState().angle)));
-  }
-  return poses.toArray(poseArr);
-}
-*/
+ * public Pose2d[] getSwerveModulePoses(Pose2d robotPose) {
+ * Pose2d[] poseArr = new Pose2d[swerveDriveConfiguration.moduleCount];
+ * List<Pose2d> poses = new ArrayList<>();
+ * for (SwerveModule module : swerveModules) {
+ * poses.add(
+ * robotPose.plus(
+ * new Transform2d(module.configuration.moduleLocation,
+ * module.getState().angle)));
+ * }
+ * return poses.toArray(poseArr);
+ * }
+ */
