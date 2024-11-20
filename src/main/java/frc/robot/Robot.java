@@ -17,11 +17,16 @@ import choreo.auto.AutoChooser.AutoRoutineGenerator;
 import edu.wpi.first.epilogue.Epilogue;
 import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.system.plant.DCMotor;
+import edu.wpi.first.math.system.plant.LinearSystemId;
+import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.TimedRobot;
+import edu.wpi.first.wpilibj.simulation.DifferentialDrivetrainSim;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
@@ -45,6 +50,9 @@ import frc.robot.subsystems.DriveTrain;
 public class Robot extends TimedRobot {
   private Command m_autonomousCommand;
   private DriveTrain driveTrain = new DriveTrain();
+
+  
+
   private AutoFactory autoFactory = Choreo.createAutoFactory(
       driveTrain,
       driveTrain::getPose,
@@ -72,15 +80,25 @@ public class Robot extends TimedRobot {
     driveTrain.setDefaultCommand(
         new RunCommand(
             () -> {
+              boolean keyboardDebug = true; //keyboard nonsense!
+
               double multiplier = (((joystick.getThrottle() * -1) + 1) / 2); // turbo mode
               double z = joystick.getZ() * -.9;
+              
+              double x = joystick.getX();
+              double y = joystick.getY();
+
+              if(keyboardDebug) {
+                x = Math.sin(Math.atan2(x,y))*Math.max(Math.abs(y),Math.abs(x));
+                y = Math.cos(Math.atan2(x,y))*Math.max(Math.abs(y),Math.abs(x));
+              }
 
               driveTrain.drive(
                   MathUtil.applyDeadband(
-                      joystick.getY() * -multiplier,
+                      y * -multiplier,
                       OperatorConstants.kDriveDeadband),
                   MathUtil.applyDeadband(
-                      joystick.getX() * -multiplier,
+                      x * -multiplier,
                       OperatorConstants.kDriveDeadband),
                   MathUtil.applyDeadband(z, OperatorConstants.kDriveDeadband),
                   true);
