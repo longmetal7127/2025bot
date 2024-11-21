@@ -1,7 +1,14 @@
 package frc.robot.subsystems;
 
+import org.ironmaple.simulation.SimulatedArena;
+import org.ironmaple.simulation.drivesims.GyroSimulation;
+import org.ironmaple.simulation.drivesims.SwerveDriveSimulation;
+import org.ironmaple.simulation.drivesims.SwerveModuleSimulation;
+import org.ironmaple.simulation.drivesims.configs.DriveTrainSimulationConfig;
+
 import com.studica.frc.AHRS;
 
+import static edu.wpi.first.units.Units.*;
 import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.hal.SimDouble;
 import edu.wpi.first.hal.simulation.SimDeviceDataJNI;
@@ -13,7 +20,7 @@ import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveDriveOdometry;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
-
+import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.Robot;
@@ -64,10 +71,53 @@ public class DriveTrain extends SubsystemBase {
   // sim field
   private Field2d m_field = new Field2d();
 
+  // Create and configure a drivetrain simulation configuration
+  final DriveTrainSimulationConfig driveTrainSimulationConfig = 
+  
+  DriveTrainSimulationConfig.Default()
+          // Specify gyro type (for realistic gyro drifting and error simulation)
+          .withGyro(GyroSimulation.getNav2X())
+          
+          // Specify swerve module (for realistic swerve dynamics)
+          .withSwerveModule(() ->  new SwerveModuleSimulation(
+                DCMotor.getNeoVortex(1),
+                DCMotor.getNeo550(1),
+                Swerve.ModuleConstants.kDrivingMotorReduction,
+                12.8,
+                Amps.of(60),
+                Amps.of(20),
+                Volts.of(0.1),
+                Volts.of(0.2),
+                Inches.of(2),
+                KilogramSquareMeters.of(0.03),
+                Swerve.ModuleConstants.coefficientFriction
+              )
+            )
+          
+          // Configures the track length and track width (spacing between swerve modules)
+          .withTrackLengthTrackWidth(Inches.of(Swerve.DriveConstants.kTrackWidth), Inches.of(Swerve.DriveConstants.kTrackWidth))
+          
+          // Configures the bumper size (dimensions of the robot bumper)
+          .withBumperSize(Inches.of(35), Inches.of(35));
+
+  public SwerveDriveSimulation swerveDriveSimulation;
+
   /** Creates a new DriveSubsystem. */
   public DriveTrain() {
-    // create field on smart dashboard
-    SmartDashboard.putData("Field", m_field);
+    if(Robot.isSimulation()) {
+      // create field on smart dashboard
+      SmartDashboard.putData("Field", m_field);
+
+      this.swerveDriveSimulation = new SwerveDriveSimulation(
+          // Specify Configuration
+          driveTrainSimulationConfig, 
+          // Specify starting pose
+          new Pose2d(3, 3, new Rotation2d())
+      );
+      SimulatedArena.getInstance().addDriveTrainSimulation(swerveDriveSimulation); 
+      // creation the swerve simulation (please refer to previous documents)
+
+    }
   }
 
   @Override

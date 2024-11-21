@@ -4,6 +4,11 @@
 
 package frc.robot;
 
+import java.util.List;
+
+import org.ironmaple.simulation.SimulatedArena;
+import org.ironmaple.simulation.SimulatedArena.FieldMap;
+import org.ironmaple.simulation.seasonspecific.crescendo2024.CrescendoNoteOnField;
 import org.littletonrobotics.urcl.URCL;
 
 import choreo.Choreo;
@@ -17,6 +22,8 @@ import edu.wpi.first.epilogue.Epilogue;
 import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Pose3d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
@@ -43,6 +50,9 @@ import frc.robot.subsystems.DriveTrain;
 public class Robot extends TimedRobot {
   private Command m_autonomousCommand;
   private DriveTrain driveTrain = new DriveTrain();
+  private FieldMap fieldMap = new FieldMap() {
+
+  };
 
   private AutoFactory autoFactory = Choreo.createAutoFactory(
       driveTrain,
@@ -71,18 +81,18 @@ public class Robot extends TimedRobot {
     driveTrain.setDefaultCommand(
         new RunCommand(
             () -> {
-              boolean keyboardDebug = true; //keyboard nonsense!
+              boolean keyboardDebug = true; // keyboard nonsense!
 
               double multiplier = (((joystick.getThrottle() * -1) + 1) / 2); // turbo mode
               double z = joystick.getZ() * -.9;
-              
+
               double x = joystick.getX();
               double y = joystick.getY();
 
-              //limiting x/y on keyboard
-              if(keyboardDebug) {
-                x = Math.sin(Math.atan2(x,y))*Math.max(Math.abs(y),Math.abs(x));
-                y = Math.cos(Math.atan2(x,y))*Math.max(Math.abs(y),Math.abs(x));
+              // limiting x/y on keyboard
+              if (keyboardDebug) {
+                x = Math.sin(Math.atan2(x, y)) * Math.max(Math.abs(y), Math.abs(x));
+                y = Math.cos(Math.atan2(x, y)) * Math.max(Math.abs(y), Math.abs(x));
               }
 
               driveTrain.drive(
@@ -181,14 +191,29 @@ public class Robot extends TimedRobot {
   public void testPeriodic() {
   }
 
+  public List<Pose3d> notesPoses;
+
   /** This function is called once when the robot is first started up. */
   @Override
   public void simulationInit() {
+    // Obtains the default instance of the simulation world, which is a Crescendo
+    // Arena.
+    SimulatedArena.getInstance();
+    
+    // Add a Crescendo note to the field
+    SimulatedArena.getInstance().resetFieldForAuto();
+
+    // Get the positions of the notes (both on the field and in the air)
+    notesPoses = SimulatedArena.getInstance().getGamePiecesByType("Note");
+    
+
   }
 
   /** This function is called periodically whilst in simulation. */
+  // simulation period method in your Robot.java
   @Override
   public void simulationPeriodic() {
+    SimulatedArena.getInstance().simulationPeriodic();
   }
 
   public Command getAutonomousCommand() {

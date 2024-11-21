@@ -60,6 +60,8 @@ public class Swerve {
         // more teeth will result in a robot that drives faster).
         public static final int kDrivingMotorPinionTeeth = 14;
 
+        public static final double coefficientFriction = 1.43;
+
         // Calculations required for driving motor conversion factors and feed forward
         public static final double kDrivingMotorFreeSpeedRps = MotorConstants.kFreeSpeedRpm / 60;
         public static final double kWheelDiameterMeters = 0.0762;
