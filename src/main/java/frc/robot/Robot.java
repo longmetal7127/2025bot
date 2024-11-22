@@ -31,6 +31,7 @@ import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.ConditionalCommand;
 import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandJoystick;
 import frc.robot.configs.Constants;
@@ -50,6 +51,7 @@ import frc.robot.subsystems.DriveTrain;
 public class Robot extends TimedRobot {
   private Command m_autonomousCommand;
   private DriveTrain driveTrain = new DriveTrain();
+  private double buttonCooldown = 0;
   private FieldMap fieldMap = new FieldMap() {
 
   };
@@ -78,22 +80,64 @@ public class Robot extends TimedRobot {
     configureBindings();
     autoChooser = new AutoChooser(autoFactory, "");
     autoChooser.addAutoRoutine("auto", this::auto);
+
     driveTrain.setDefaultCommand(
         new RunCommand(
             () -> {
-              boolean keyboardDebug = true; // keyboard nonsense!
+              if(joystick.button(1).getAsBoolean()&&buttonCooldown<=0){
+                driveTrain.zeroHeading();
+                buttonCooldown = 0.25;
+              }
+              if(buttonCooldown>0) {
+               buttonCooldown-=0.02;
+              }
+              //System.out.println("here2");
+              int controltype = 2; // keyboard nonsense! 1=keyboard 2=logitech joystick 0=thrustmaster
 
               double multiplier = (((joystick.getThrottle() * -1) + 1) / 2); // turbo mode
               double z = joystick.getZ() * -.9;
 
               double x = joystick.getX();
               double y = joystick.getY();
+              
+              // limiting x/y on input methods
+              if (controltype == 1) {
+                /*
+                var ogx = x;
+                var ogy = y;
+                x = Math.sin(Math.atan2(ogx, ogy)) * Math.min(Math.max(Math.abs(ogy), Math.abs(ogx)),1);
+                y = Math.cos(Math.atan2(ogx, ogy)) * Math.min(Math.max(Math.abs(ogy), Math.abs(ogx)),1);
+                */
+              } else if (controltype == 2) {
+                /*
+                var ogx = x;
+                var ogy = y;
+                y = ogy;
+                x = ogx;
+                */
 
-              // limiting x/y on keyboard
-              if (keyboardDebug) {
-                x = Math.sin(Math.atan2(x, y)) * Math.max(Math.abs(y), Math.abs(x));
-                y = Math.cos(Math.atan2(x, y)) * Math.max(Math.abs(y), Math.abs(x));
+                if(x>=-.101&&x<=.101) {
+                  x = 0;
+                }
+                if(y>=-.101&&y<=.101) {
+                  y = 0;
+                }
+                if(x>=-.101&&x<=.101) {
+                  x = 0;
+                }
+
+                /*
+                ogx = x;
+                ogy = y;
+                x = Math.sin(Math.atan2(ogx, ogy)) * Math.max(Math.abs(ogy), Math.abs(ogx));
+                y = Math.cos(Math.atan2(ogx, ogy)) * Math.max(Math.abs(ogy), Math.abs(ogx));
+                */
               }
+
+              var ogx = x;
+              var ogy = y;
+              x = Math.sin(Math.atan2(ogx, ogy)) * Math.min(Math.max(Math.abs(ogy), Math.abs(ogx)),1);
+              y = Math.cos(Math.atan2(ogx, ogy)) * Math.min(Math.max(Math.abs(ogy), Math.abs(ogx)),1);
 
               driveTrain.drive(
                   MathUtil.applyDeadband(
