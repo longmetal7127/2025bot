@@ -139,6 +139,7 @@ public class Robot extends TimedRobot {
               x = Math.sin(Math.atan2(ogx, ogy)) * Math.min(Math.max(Math.abs(ogy), Math.abs(ogx)),1);
               y = Math.cos(Math.atan2(ogx, ogy)) * Math.min(Math.max(Math.abs(ogy), Math.abs(ogx)),1);
 
+              System.out.println(Math.hypot(x, y));
               driveTrain.drive(
                   MathUtil.applyDeadband(
                       y * -multiplier,

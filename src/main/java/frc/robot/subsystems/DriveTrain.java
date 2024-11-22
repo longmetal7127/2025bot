@@ -14,6 +14,7 @@ import edu.wpi.first.hal.SimDouble;
 import edu.wpi.first.hal.simulation.SimDeviceDataJNI;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.geometry.Twist2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
@@ -52,6 +53,10 @@ public class DriveTrain extends SubsystemBase {
       DriveConstants.kRearRightTurningCanId,
       DriveConstants.kBackRightChassisAngularOffset);
 
+
+  //sim zero timer
+  private double bufferZeroTime = 0.25;
+
   // The gyro sensor
   public final AHRS m_gyro = new AHRS(AHRS.NavXComType.kMXP_SPI);
   private int dev = SimDeviceDataJNI.getSimDeviceHandle("navX-Sensor[4]"); // TODO: figure out why this is a 4 and not 0 like in the docs
@@ -72,9 +77,7 @@ public class DriveTrain extends SubsystemBase {
   private Field2d m_field = new Field2d();
 
   // Create and configure a drivetrain simulation configuration
-  final DriveTrainSimulationConfig driveTrainSimulationConfig = 
-  
-  DriveTrainSimulationConfig.Default()
+  final DriveTrainSimulationConfig driveTrainSimulationConfig = DriveTrainSimulationConfig.Default()
           // Specify gyro type (for realistic gyro drifting and error simulation)
           .withGyro(GyroSimulation.getNav2X())
           
@@ -105,6 +108,7 @@ public class DriveTrain extends SubsystemBase {
   /** Creates a new DriveSubsystem. */
   public DriveTrain() {
     if(Robot.isSimulation()) {
+
       // create field on smart dashboard
       SmartDashboard.putData("Field", m_field);
 
@@ -116,7 +120,13 @@ public class DriveTrain extends SubsystemBase {
       );
       SimulatedArena.getInstance().addDriveTrainSimulation(swerveDriveSimulation); 
       // creation the swerve simulation (please refer to previous documents)
+      //resetOdometry(new Pose2d(new Translation2d(), new Rotation2d(Math.PI/2)));
+      //angle.set(Math.PI/2);
+      //zeroHeading();
 
+      m_odometry.resetPose(
+          new Pose2d(new Translation2d(0,0), new Rotation2d(Math.PI/2))
+      );
     }
   }
 
@@ -150,6 +160,13 @@ public class DriveTrain extends SubsystemBase {
       // update robot pose
       m_field.setRobotPose(m_odometry.getPoseMeters());
       angle.set(-m_odometry.getPoseMeters().getRotation().getDegrees());
+
+      if(bufferZeroTime <= 0) {
+        System.out.println("here");
+        zeroHeading();
+        bufferZeroTime = 2;
+      } else if(bufferZeroTime<1)
+        bufferZeroTime -= dt;
     } else {
       // update odemetry normally
       m_odometry.update(
