@@ -162,7 +162,6 @@ public class DriveTrain extends SubsystemBase {
       angle.set(-m_odometry.getPoseMeters().getRotation().getDegrees());
 
       if(bufferZeroTime <= 0) {
-        System.out.println("here");
         zeroHeading();
         bufferZeroTime = 2;
       } else if(bufferZeroTime<1)
