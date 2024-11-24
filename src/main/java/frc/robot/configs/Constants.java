@@ -14,8 +14,11 @@ package frc.robot.configs;
  */
 public final class Constants {
   public static class OperatorConstants {
+    public static final boolean kLogitech = false;
     public static final int kDriverJoystickPort = 0;
     public static final double kDriveDeadband = 0.05;
+    public static final double kLogitechDeadband = 0.1;
 
   }
+
 }

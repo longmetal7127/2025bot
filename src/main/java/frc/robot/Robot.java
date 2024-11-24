@@ -51,7 +51,6 @@ import frc.robot.subsystems.DriveTrain;
 public class Robot extends TimedRobot {
   private Command m_autonomousCommand;
   private DriveTrain driveTrain = new DriveTrain();
-  private double buttonCooldown = 0;
   private FieldMap fieldMap = new FieldMap() {
 
   };
@@ -84,69 +83,25 @@ public class Robot extends TimedRobot {
     driveTrain.setDefaultCommand(
         new RunCommand(
             () -> {
-              if(joystick.button(1).getAsBoolean()&&buttonCooldown<=0){
-                driveTrain.zeroHeading();
-                buttonCooldown = 0.25;
-              }
-              if(buttonCooldown>0) {
-               buttonCooldown-=0.02;
-              }
-              //System.out.println("here2");
-              int controltype = 2; // keyboard nonsense! 1=keyboard 2=logitech joystick 0=thrustmaster
 
               double multiplier = (((joystick.getThrottle() * -1) + 1) / 2); // turbo mode
-              double z = joystick.getZ() * -.9;
-
+              double z = joystick.getZ();
               double x = joystick.getX();
               double y = joystick.getY();
-              
+
               // limiting x/y on input methods
-              if (controltype == 1) {
-                /*
-                var ogx = x;
-                var ogy = y;
-                x = Math.sin(Math.atan2(ogx, ogy)) * Math.min(Math.max(Math.abs(ogy), Math.abs(ogx)),1);
-                y = Math.cos(Math.atan2(ogx, ogy)) * Math.min(Math.max(Math.abs(ogy), Math.abs(ogx)),1);
-                */
-              } else if (controltype == 2) {
-                /*
-                var ogx = x;
-                var ogy = y;
-                y = ogy;
-                x = ogx;
-                */
-
-                if(x>=-.101&&x<=.101) {
-                  x = 0;
-                }
-                if(y>=-.101&&y<=.101) {
-                  y = 0;
-                }
-                if(x>=-.101&&x<=.101) {
-                  x = 0;
-                }
-
-                /*
-                ogx = x;
-                ogy = y;
-                x = Math.sin(Math.atan2(ogx, ogy)) * Math.max(Math.abs(ogy), Math.abs(ogx));
-                y = Math.cos(Math.atan2(ogx, ogy)) * Math.max(Math.abs(ogy), Math.abs(ogx));
-                */
-              }
-
-              var ogx = x;
-              var ogy = y;
-              x = Math.sin(Math.atan2(ogx, ogy)) * Math.min(Math.max(Math.abs(ogy), Math.abs(ogx)),1);
-              y = Math.cos(Math.atan2(ogx, ogy)) * Math.min(Math.max(Math.abs(ogy), Math.abs(ogx)),1);
+              x = Math.sin(Math.atan2(x, y)) * Math.min(Math.max(Math.abs(y), Math.abs(x)), 1);
+              y = Math.cos(Math.atan2(x, y)) * Math.min(Math.max(Math.abs(y), Math.abs(x)), 1);
+              double deadband = OperatorConstants.kLogitech ? OperatorConstants.kLogitechDeadband : OperatorConstants.kDriveDeadband;
 
               driveTrain.drive(
                   MathUtil.applyDeadband(
                       y * -multiplier,
-                      OperatorConstants.kDriveDeadband),
+                      deadband),
                   MathUtil.applyDeadband(
                       x * -multiplier,
-                      OperatorConstants.kDriveDeadband),
-                  MathUtil.applyDeadband(z, OperatorConstants.kDriveDeadband),
+                      deadband),
+                  MathUtil.applyDeadband(z * -1, deadband),
                   true);
             },
             driveTrain));
@@ -155,7 +110,9 @@ public class Robot extends TimedRobot {
   }
 
   public void configureBindings() {
-
+    joystick.trigger().onTrue(Commands.run(() -> {
+      driveTrain.zeroHeading();
+    }));
   }
 
   /**
@@ -243,13 +200,12 @@ public class Robot extends TimedRobot {
     // Obtains the default instance of the simulation world, which is a Crescendo
     // Arena.
     SimulatedArena.getInstance();
-    
+
     // Add a Crescendo note to the field
     SimulatedArena.getInstance().resetFieldForAuto();
 
     // Get the positions of the notes (both on the field and in the air)
     notesPoses = SimulatedArena.getInstance().getGamePiecesByType("Note");
-    
 
   }
 
