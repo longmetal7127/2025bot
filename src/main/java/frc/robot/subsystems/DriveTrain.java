@@ -86,7 +86,7 @@ public class DriveTrain extends SubsystemBase {
                 DCMotor.getNeoVortex(1),
                 DCMotor.getNeo550(1),
                 Swerve.ModuleConstants.kDrivingMotorReduction,
-                12.8,
+                46.42,
                 Amps.of(60),
                 Amps.of(20),
                 Volts.of(0.1),
