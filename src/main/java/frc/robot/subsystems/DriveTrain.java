@@ -33,22 +33,22 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 @Logged
 public class DriveTrain extends SubsystemBase {
   // Create SwerveModules
-  private final SwerveModule m_frontLeft = new SwerveModule(
+  private final Module m_frontLeft = new Module(
       DriveConstants.kFrontLeftDrivingCanId,
       DriveConstants.kFrontLeftTurningCanId,
       DriveConstants.kFrontLeftChassisAngularOffset);
 
-  private final SwerveModule m_frontRight = new SwerveModule(
+  private final Module m_frontRight = new Module(
       DriveConstants.kFrontRightDrivingCanId,
       DriveConstants.kFrontRightTurningCanId,
       DriveConstants.kFrontRightChassisAngularOffset);
 
-  private final SwerveModule m_rearLeft = new SwerveModule(
+  private final Module m_rearLeft = new Module(
       DriveConstants.kRearLeftDrivingCanId,
       DriveConstants.kRearLeftTurningCanId,
       DriveConstants.kBackLeftChassisAngularOffset);
 
-  private final SwerveModule m_rearRight = new SwerveModule(
+  private final Module m_rearRight = new Module(
       DriveConstants.kRearRightDrivingCanId,
       DriveConstants.kRearRightTurningCanId,
       DriveConstants.kBackRightChassisAngularOffset);
