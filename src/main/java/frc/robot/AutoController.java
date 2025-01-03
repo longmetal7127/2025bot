@@ -3,8 +3,7 @@ package frc.robot;
 import java.util.function.BiConsumer;
 
 import frc.robot.configs.Swerve.AutoConstants;
-import frc.robot.subsystems.DriveTrain;
-
+import frc.robot.subsystems.drive.DriveTrain;
 import choreo.trajectory.SwerveSample;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Pose2d;

@@ -36,7 +36,7 @@ import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandJoystick;
 import frc.robot.configs.Constants;
 import frc.robot.configs.Constants.OperatorConstants;
-import frc.robot.subsystems.DriveTrain;
+import frc.robot.subsystems.drive.DriveTrain;
 
 /**
  * The VM is configured to automatically run this class, and to call the

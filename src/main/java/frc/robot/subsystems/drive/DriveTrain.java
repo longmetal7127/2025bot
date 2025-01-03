@@ -1,4 +1,4 @@
-package frc.robot.subsystems;
+package frc.robot.subsystems.drive;
 
 import org.ironmaple.simulation.SimulatedArena;
 import org.ironmaple.simulation.drivesims.GyroSimulation;
@@ -27,6 +27,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.Robot;
 import frc.robot.configs.Swerve;
 import frc.robot.configs.Swerve.DriveConstants;
+import frc.robot.subsystems.drive.module.SwerveModule;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
@@ -87,8 +88,6 @@ public class DriveTrain extends SubsystemBase {
                 DCMotor.getNeo550(1),
                 Swerve.ModuleConstants.kDrivingMotorReduction,
                 12.8,
-                Amps.of(60),
-                Amps.of(20),
                 Volts.of(0.1),
                 Volts.of(0.2),
                 Inches.of(2),
