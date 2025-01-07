@@ -8,7 +8,6 @@ import java.util.List;
 
 import org.ironmaple.simulation.SimulatedArena;
 import org.ironmaple.simulation.SimulatedArena.FieldMap;
-import org.ironmaple.simulation.seasonspecific.crescendo2024.CrescendoNoteOnField;
 import org.littletonrobotics.urcl.URCL;
 
 import choreo.Choreo;
@@ -16,14 +15,12 @@ import choreo.auto.AutoChooser;
 import choreo.auto.AutoFactory;
 import choreo.auto.AutoFactory.AutoBindings;
 import choreo.auto.AutoLoop;
-
 import choreo.auto.AutoTrajectory;
 import edu.wpi.first.epilogue.Epilogue;
 import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
-import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
@@ -31,7 +28,6 @@ import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
-import edu.wpi.first.wpilibj2.command.ConditionalCommand;
 import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandJoystick;
 import frc.robot.configs.Constants;
@@ -106,7 +102,6 @@ public class Robot extends TimedRobot {
             },
             driveTrain));
     Epilogue.bind(this);
-
   }
 
   public void configureBindings() {

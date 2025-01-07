@@ -1,5 +1,7 @@
 package frc.robot.subsystems.drive;
 
+import static edu.wpi.first.units.Units.*;
+
 import org.ironmaple.simulation.SimulatedArena;
 import org.ironmaple.simulation.drivesims.GyroSimulation;
 import org.ironmaple.simulation.drivesims.SwerveDriveSimulation;
@@ -8,7 +10,6 @@ import org.ironmaple.simulation.drivesims.configs.DriveTrainSimulationConfig;
 
 import com.studica.frc.AHRS;
 
-import static edu.wpi.first.units.Units.*;
 import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.hal.SimDouble;
 import edu.wpi.first.hal.simulation.SimDeviceDataJNI;
@@ -24,12 +25,12 @@ import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Robot;
 import frc.robot.configs.Swerve;
 import frc.robot.configs.Swerve.DriveConstants;
 import frc.robot.subsystems.drive.module.SwerveModule;
-import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 @Logged
 public class DriveTrain extends SubsystemBase {
@@ -54,13 +55,13 @@ public class DriveTrain extends SubsystemBase {
       DriveConstants.kRearRightTurningCanId,
       DriveConstants.kBackRightChassisAngularOffset);
 
-
-  //sim zero timer
+  // sim zero timer
   private double bufferZeroTime = 0.25;
 
   // The gyro sensor
   public final AHRS m_gyro = new AHRS(AHRS.NavXComType.kMXP_SPI);
-  private int dev = SimDeviceDataJNI.getSimDeviceHandle("navX-Sensor[4]"); // TODO: figure out why this is a 4 and not 0 like in the docs
+  private int dev = SimDeviceDataJNI.getSimDeviceHandle("navX-Sensor[4]"); // TODO: figure out why this is a 4 and not 0
+                                                                           // like in the docs
   private SimDouble angle = new SimDouble(SimDeviceDataJNI.getSimValueHandle(dev, "Yaw"));
 
   // Odometry class for tracking robot pose
@@ -79,53 +80,52 @@ public class DriveTrain extends SubsystemBase {
 
   // Create and configure a drivetrain simulation configuration
   final DriveTrainSimulationConfig driveTrainSimulationConfig = DriveTrainSimulationConfig.Default()
-          // Specify gyro type (for realistic gyro drifting and error simulation)
-          .withGyro(GyroSimulation.getNav2X())
-          
-          // Specify swerve module (for realistic swerve dynamics)
-          .withSwerveModule(() ->  new SwerveModuleSimulation(
-                DCMotor.getNeoVortex(1),
-                DCMotor.getNeo550(1),
-                Swerve.ModuleConstants.kDrivingMotorReduction,
-                12.8,
-                Volts.of(0.1),
-                Volts.of(0.2),
-                Inches.of(2),
-                KilogramSquareMeters.of(0.03),
-                Swerve.ModuleConstants.coefficientFriction
-              )
-            )
-          
-          // Configures the track length and track width (spacing between swerve modules)
-          .withTrackLengthTrackWidth(Inches.of(Swerve.DriveConstants.kTrackWidth), Inches.of(Swerve.DriveConstants.kTrackWidth))
-          
-          // Configures the bumper size (dimensions of the robot bumper)
-          .withBumperSize(Inches.of(35), Inches.of(35));
+      // Specify gyro type (for realistic gyro drifting and error simulation)
+      .withGyro(GyroSimulation.getNav2X())
+
+      // Specify swerve module (for realistic swerve dynamics)
+      .withSwerveModule(() -> new SwerveModuleSimulation(
+          DCMotor.getNeoVortex(1),
+          DCMotor.getNeo550(1),
+          Swerve.ModuleConstants.kDrivingMotorReduction,
+          12.8,
+          Amps.of(Swerve.MotorConstants.kDriveMotorCurrentLimit),
+          Amps.of(Swerve.MotorConstants.kTurnMotorCurrentLimit),
+          Volts.of(0.1),
+          Volts.of(0.2),
+          Inches.of(2),
+          KilogramSquareMeters.of(0.03),
+          Swerve.ModuleConstants.coefficientFriction))
+
+      // Configures the track length and track width (spacing between swerve modules)
+      .withTrackLengthTrackWidth(Inches.of(Swerve.DriveConstants.kTrackWidth),
+          Inches.of(Swerve.DriveConstants.kTrackWidth))
+
+      // Configures the bumper size (dimensions of the robot bumper)
+      .withBumperSize(Inches.of(35), Inches.of(35));
 
   public SwerveDriveSimulation swerveDriveSimulation;
 
   /** Creates a new DriveSubsystem. */
   public DriveTrain() {
-    if(Robot.isSimulation()) {
+    if (Robot.isSimulation()) {
 
       // create field on smart dashboard
       SmartDashboard.putData("Field", m_field);
 
       this.swerveDriveSimulation = new SwerveDriveSimulation(
           // Specify Configuration
-          driveTrainSimulationConfig, 
+          driveTrainSimulationConfig,
           // Specify starting pose
-          new Pose2d(3, 3, new Rotation2d())
-      );
-      SimulatedArena.getInstance().addDriveTrainSimulation(swerveDriveSimulation); 
+          new Pose2d(3, 3, new Rotation2d()));
+      SimulatedArena.getInstance().addDriveTrainSimulation(swerveDriveSimulation);
       // creation the swerve simulation (please refer to previous documents)
-      //resetOdometry(new Pose2d(new Translation2d(), new Rotation2d(Math.PI/2)));
-      //angle.set(Math.PI/2);
-      //zeroHeading();
+      // resetOdometry(new Pose2d(new Translation2d(), new Rotation2d(Math.PI/2)));
+      // angle.set(Math.PI/2);
+      // zeroHeading();
 
       m_odometry.resetPose(
-          new Pose2d(new Translation2d(0,0), new Rotation2d(Math.PI/2))
-      );
+          new Pose2d(new Translation2d(0, 0), new Rotation2d(Math.PI / 2)));
     }
   }
 
@@ -160,10 +160,10 @@ public class DriveTrain extends SubsystemBase {
       m_field.setRobotPose(m_odometry.getPoseMeters());
       angle.set(-m_odometry.getPoseMeters().getRotation().getDegrees());
 
-      if(bufferZeroTime <= 0) {
+      if (bufferZeroTime <= 0) {
         zeroHeading();
         bufferZeroTime = 2;
-      } else if(bufferZeroTime<1)
+      } else if (bufferZeroTime < 1)
         bufferZeroTime -= dt;
     } else {
       // update odemetry normally
@@ -231,20 +231,18 @@ public class DriveTrain extends SubsystemBase {
     double ySpeedDelivered = ySpeed * DriveConstants.kMaxSpeedMetersPerSecond;
     double rotDelivered = rot * DriveConstants.kMaxAngularSpeed;
 
-      SwerveModuleState[] swerveModuleStates = DriveConstants.kDriveKinematics.toSwerveModuleStates(
-          fieldRelative
-              ? ChassisSpeeds.fromFieldRelativeSpeeds(xSpeedDelivered, ySpeedDelivered, rotDelivered,
-                  m_gyro.getRotation2d())
-              : new ChassisSpeeds(xSpeedDelivered, ySpeedDelivered, rotDelivered));
-      SwerveDriveKinematics.desaturateWheelSpeeds(
-          swerveModuleStates, DriveConstants.kMaxSpeedMetersPerSecond);
+    SwerveModuleState[] swerveModuleStates = DriveConstants.kDriveKinematics.toSwerveModuleStates(
+        fieldRelative
+            ? ChassisSpeeds.fromFieldRelativeSpeeds(xSpeedDelivered, ySpeedDelivered, rotDelivered,
+                m_gyro.getRotation2d())
+            : new ChassisSpeeds(xSpeedDelivered, ySpeedDelivered, rotDelivered));
+    SwerveDriveKinematics.desaturateWheelSpeeds(
+        swerveModuleStates, DriveConstants.kMaxSpeedMetersPerSecond);
 
-      
-      m_frontLeft.setDesiredState(swerveModuleStates[0]);
-      m_frontRight.setDesiredState(swerveModuleStates[1]);
-      m_rearLeft.setDesiredState(swerveModuleStates[2]);
-      m_rearRight.setDesiredState(swerveModuleStates[3]);
-    
+    m_frontLeft.setDesiredState(swerveModuleStates[0]);
+    m_frontRight.setDesiredState(swerveModuleStates[1]);
+    m_rearLeft.setDesiredState(swerveModuleStates[2]);
+    m_rearRight.setDesiredState(swerveModuleStates[3]);
 
   }
 
