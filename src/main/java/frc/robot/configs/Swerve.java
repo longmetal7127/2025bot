@@ -40,7 +40,8 @@ public class Swerve {
         public static final double kFrontRightChassisAngularOffset = 0;
         public static final double kBackLeftChassisAngularOffset = Math.PI;
         public static final double kBackRightChassisAngularOffset = Math.PI / 2;
-
+    }
+    public static final class CANIds {
         // SPARK MAX CAN IDs
         public static final int kFrontLeftDrivingCanId = 2;
         public static final int kRearLeftDrivingCanId = 4;
