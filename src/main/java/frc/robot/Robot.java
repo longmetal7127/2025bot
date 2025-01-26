@@ -27,6 +27,7 @@ import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
 import frc.robot.configs.Constants;
 import frc.robot.configs.Constants.OperatorConstants;
 import frc.robot.subsystems.DriveTrain;
+import frc.robot.subsystems.Elevator;
 
 /**
  * The VM is configured to automatically run this class, and to call the
@@ -41,6 +42,7 @@ import frc.robot.subsystems.DriveTrain;
 public class Robot extends TimedRobot {
   private Command m_autonomousCommand;
   private DriveTrain driveTrain = new DriveTrain();
+  private Elevator elevator = new Elevator();
   private AutoFactory autoFactory;
   private final AutoChooser autoChooser;
   public static CommandJoystick joystick = new CommandJoystick(
@@ -102,6 +104,13 @@ public class Robot extends TimedRobot {
     joystick.trigger().onTrue(Commands.run(() -> {
       driveTrain.zeroHeading();
     }));
+    joystick.button(1).onTrue(elevator.incrementSetpointCommand(1));
+    joystick.button(2).onTrue(elevator.incrementSetpointCommand(-1));
+    joystick.button(3).onTrue(elevator.setSetpointCommand(0));
+    joystick.button(4).onTrue(elevator.setSetpointCommand(20));
+
+
+
   }
 
   /**
