@@ -4,34 +4,23 @@
 
 package frc.robot;
 
-import java.util.List;
 
-import org.ironmaple.simulation.SimulatedArena;
-import org.ironmaple.simulation.SimulatedArena.FieldMap;
-import org.ironmaple.simulation.seasonspecific.crescendo2024.CrescendoNoteOnField;
 import org.littletonrobotics.urcl.URCL;
 
-import choreo.Choreo;
 import choreo.auto.AutoChooser;
 import choreo.auto.AutoFactory;
-import choreo.auto.AutoFactory.AutoBindings;
-import choreo.auto.AutoLoop;
+import choreo.auto.AutoRoutine;
 
 import choreo.auto.AutoTrajectory;
 import edu.wpi.first.epilogue.Epilogue;
 import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Pose3d;
-import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj.DataLogManager;
-import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
-import edu.wpi.first.wpilibj2.command.ConditionalCommand;
 import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandJoystick;
 import frc.robot.configs.Constants;
@@ -51,18 +40,7 @@ import frc.robot.subsystems.DriveTrain;
 public class Robot extends TimedRobot {
   private Command m_autonomousCommand;
   private DriveTrain driveTrain = new DriveTrain();
-  private FieldMap fieldMap = new FieldMap() {
-
-  };
-
-  private AutoFactory autoFactory = Choreo.createAutoFactory(
-      driveTrain,
-      driveTrain::getPose,
-      new AutoController(driveTrain),
-      () -> {
-        return DriverStation.getAlliance().orElseGet(() -> Alliance.Blue).equals(Alliance.Red);
-      },
-      new AutoBindings());
+  private AutoFactory autoFactory;
   private AutoChooser autoChooser;
   public static CommandJoystick joystick = new CommandJoystick(
       Constants.OperatorConstants.kDriverJoystickPort);
@@ -75,10 +53,14 @@ public class Robot extends TimedRobot {
   public Robot() {
     DataLogManager.start();
     URCL.start();
-
+    autoFactory = new AutoFactory(
+        driveTrain::getPose,
+        driveTrain::resetOdometry,
+        new AutoController(driveTrain),
+        true, driveTrain);
     configureBindings();
-    autoChooser = new AutoChooser(autoFactory, "");
-    autoChooser.addAutoRoutine("auto", this::auto);
+    autoChooser = new AutoChooser();
+    autoChooser.addRoutine("auto", this::auto);
 
     driveTrain.setDefaultCommand(
         new RunCommand(
@@ -92,7 +74,8 @@ public class Robot extends TimedRobot {
               // limiting x/y on input methods
               x = Math.sin(Math.atan2(x, y)) * Math.min(Math.max(Math.abs(y), Math.abs(x)), 1);
               y = Math.cos(Math.atan2(x, y)) * Math.min(Math.max(Math.abs(y), Math.abs(x)), 1);
-              double deadband = OperatorConstants.kLogitech ? OperatorConstants.kLogitechDeadband : OperatorConstants.kDriveDeadband;
+              double deadband = OperatorConstants.kLogitech ? OperatorConstants.kLogitechDeadband
+                  : OperatorConstants.kDriveDeadband;
 
               driveTrain.drive(
                   MathUtil.applyDeadband(
@@ -192,28 +175,16 @@ public class Robot extends TimedRobot {
   public void testPeriodic() {
   }
 
-  public List<Pose3d> notesPoses;
 
   /** This function is called once when the robot is first started up. */
   @Override
   public void simulationInit() {
-    // Obtains the default instance of the simulation world, which is a Crescendo
-    // Arena.
-    SimulatedArena.getInstance();
-
-    // Add a Crescendo note to the field
-    SimulatedArena.getInstance().resetFieldForAuto();
-
-    // Get the positions of the notes (both on the field and in the air)
-    notesPoses = SimulatedArena.getInstance().getGamePiecesByType("Note");
-
   }
 
   /** This function is called periodically whilst in simulation. */
   // simulation period method in your Robot.java
   @Override
   public void simulationPeriodic() {
-    SimulatedArena.getInstance().simulationPeriodic();
   }
 
   public Command getAutonomousCommand() {
@@ -222,16 +193,16 @@ public class Robot extends TimedRobot {
     });
   }
 
-  public Command auto(final AutoFactory factory) {
-    final AutoLoop routine = factory.newLoop("auto");
+  public AutoRoutine auto() {
+    final AutoRoutine routine = autoFactory.newRoutine("auto");
 
-    final AutoTrajectory trajectory = factory.trajectory("auto", routine);
+    final AutoTrajectory trajectory = routine.trajectory("auto");
 
     // entry point for the auto
     // resets the odometry to the starting position,
     // then shoots the starting note,
     // then runs the trajectory to the first close note while extending the intake
-    routine.enabled()
+    routine.active()
         .onTrue(
             driveTrain.cmdResetOdometry(
                 trajectory.getInitialPose()
@@ -242,7 +213,7 @@ public class Robot extends TimedRobot {
                         }))
                 .withName("auto entry point"));
 
-    return routine.cmd().withName("auto");
+    return routine;
   }
 
 }
