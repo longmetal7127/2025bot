@@ -1,6 +1,6 @@
 package frc.robot;
 
-import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 import frc.robot.configs.Swerve.AutoConstants;
 import frc.robot.subsystems.DriveTrain;
@@ -10,7 +10,7 @@ import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 
-public class AutoController implements BiConsumer<Pose2d, SwerveSample> {
+public class AutoController implements Consumer<SwerveSample> {
     private final DriveTrain swerve;
     private final PIDController xController = new PIDController(
         AutoConstants.kTranslation.kP,
@@ -37,7 +37,8 @@ public class AutoController implements BiConsumer<Pose2d, SwerveSample> {
     }
 
     @Override
-    public void accept(Pose2d pose, SwerveSample referenceState) {
+    public void accept(SwerveSample referenceState) {
+        Pose2d pose = swerve.getPose();
         double xFF = referenceState.vx;
         double yFF = referenceState.vy;
         double rotationFF = referenceState.omega;
