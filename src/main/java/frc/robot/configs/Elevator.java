@@ -50,8 +50,8 @@ public class Elevator {
             elevatorConfig.closedLoop
                     .feedbackSensor(FeedbackSensor.kPrimaryEncoder)
                     // Set PID values for position control
-                    .p(0.14)
-                    .d(0.17)
+                    .p(0.07)
+                    .d(0.23)
                     .outputRange(-1, 1)
                     .maxMotion // Set MAXMotion parameters for position control
                         .maxVelocity(4200)
