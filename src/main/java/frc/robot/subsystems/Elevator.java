@@ -12,6 +12,7 @@ import com.revrobotics.sim.SparkMaxSim;
 import com.revrobotics.spark.SparkBase.ControlType;
 import com.revrobotics.spark.SparkBase.PersistMode;
 import com.revrobotics.spark.SparkBase.ResetMode;
+import com.revrobotics.spark.ClosedLoopSlot;
 import com.revrobotics.spark.SparkClosedLoopController;
 import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
@@ -82,7 +83,7 @@ public class Elevator extends SubsystemBase {
       0.0);
 
   // Mechanism2d setup for subsystem
-  public final Mechanism2d m_mech2d = new Mechanism2d(50, 50);
+  public final Mechanism2d m_mech2d = new Mechanism2d(5, 5);
   private final MechanismRoot2d m_mech2dRoot = m_mech2d.getRoot("ElevatorArm Root", 25, 0);
   private final MechanismLigament2d m_elevatorStage1Mech2d = m_mech2dRoot.append(
       new MechanismLigament2d(
@@ -142,7 +143,7 @@ public class Elevator extends SubsystemBase {
 
   private void moveToSetpoint() {
     elevatorClosedLoopController.setReference(
-        elevatorCurrentTarget, ControlType.kMAXMotionPositionControl);
+        elevatorCurrentTarget, ControlType.kMAXMotionPositionControl, ClosedLoopSlot.kSlot0, 0.75);
   }
 
   public Command incrementSetpointCommand(double setpoint) {
@@ -150,12 +151,12 @@ public class Elevator extends SubsystemBase {
       this.elevatorCurrentTarget += setpoint;
     });
   }
+
   public Command setSetpointCommand(double setpoint) {
     return this.runOnce(() -> {
       this.elevatorCurrentTarget = setpoint;
     });
   }
-
 
   @Override
   public void periodic() {
@@ -216,15 +217,26 @@ public class Elevator extends SubsystemBase {
   public Pose3d[] getMechanismPoses() {
     double stage1Height = m_elevatorStage1Mech2d.getLength() - SimulationRobotConstants.kMinElevatorStage1HeightMeters;
     double carriageHeight = m_elevatorCarriageMech2d.getLength()
-    - SimulationRobotConstants.kMinElevatorCarriageHeightMeters;
+        - SimulationRobotConstants.kMinElevatorCarriageHeightMeters;
     Pose3d[] poses = {
         new Pose3d(0, 0, stage1Height,
             Rotation3d.kZero),
         new Pose3d(0, 0,
             stage1Height + carriageHeight,
+            Rotation3d.kZero),
+            new Pose3d(0, 0,
+            stage1Height + carriageHeight,
             Rotation3d.kZero)
+
 
     };
     return poses;
+  }
+
+  public double getActualPosition() {
+    return elevatorMotor.getEncoder().getPosition();
+  }
+  public double getElevatorAppliedOutput() {
+    return elevatorMotor.getAppliedOutput();
   }
 }
