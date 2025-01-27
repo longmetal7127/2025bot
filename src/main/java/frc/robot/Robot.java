@@ -106,8 +106,8 @@ public class Robot extends TimedRobot {
     }));
     joystick.button(1).onTrue(elevator.incrementSetpointCommand(1));
     joystick.button(2).onTrue(elevator.incrementSetpointCommand(-1));
-    joystick.button(3).onTrue(elevator.setSetpointCommand(0));
-    joystick.button(4).onTrue(elevator.setSetpointCommand(20));
+    joystick.button(3).onTrue(elevator.setSetpointCommand(0, 90));
+    joystick.button(4).onTrue(elevator.setSetpointCommand(20, 135));
 
 
 
