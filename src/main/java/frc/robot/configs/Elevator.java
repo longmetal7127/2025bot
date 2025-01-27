@@ -28,7 +28,7 @@ public class Elevator {
 
         static {
             // Configure basic settings of the arm motor
-            armConfig.idleMode(IdleMode.kCoast).smartCurrentLimit(40).voltageCompensation(12);
+            armConfig.idleMode(IdleMode.kBrake).smartCurrentLimit(40).voltageCompensation(12);
 
             /*
              * Configure the closed loop controller. We want to make sure we set the
@@ -37,14 +37,14 @@ public class Elevator {
             armConfig.closedLoop
                     .feedbackSensor(FeedbackSensor.kPrimaryEncoder)
                     // Set PID values for position control
-                    .p(0.1)
+                    .p(0.02)
                     .outputRange(-1, 1).maxMotion
                     // Set MAXMotion parameters for position control
                     .maxVelocity(2000)
                     .maxAcceleration(10000)
                     .allowedClosedLoopError(0.25);
 
-            elevatorConfig.idleMode(IdleMode.kCoast).smartCurrentLimit(50).voltageCompensation(12);
+            elevatorConfig.idleMode(IdleMode.kBrake).smartCurrentLimit(50).voltageCompensation(12);
 
            
             elevatorConfig.closedLoop
@@ -82,7 +82,7 @@ public class Elevator {
         public static final Mass kArmMass = Pounds.of(7.5258052);
         public static final double kArmReduction = 32; // TODO: double check
         public static final double kMinAngleRads = 0;
-        public static final double kMaxAngleRads = 0;
+        public static final double kMaxAngleRads = 180;
 
     }
 

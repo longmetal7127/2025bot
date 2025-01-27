@@ -144,6 +144,7 @@ public class Elevator extends SubsystemBase {
     private void moveToSetpoint() {
         elevatorClosedLoopController.setReference(
                 elevatorCurrentTarget, ControlType.kMAXMotionPositionControl, ClosedLoopSlot.kSlot0, 0.75);
+        armController.setReference(armCurrentTarget, ControlType.kMAXMotionPositionControl);
     }
 
     public Command incrementSetpointCommand(double setpoint) {
@@ -152,9 +153,10 @@ public class Elevator extends SubsystemBase {
         });
     }
 
-    public Command setSetpointCommand(double setpoint) {
+    public Command setSetpointCommand(double setpoint, double armSetpoint) {
         return this.runOnce(() -> {
             this.elevatorCurrentTarget = setpoint;
+            this.armCurrentTarget = armSetpoint;
         });
     }
 
@@ -237,6 +239,10 @@ public class Elevator extends SubsystemBase {
 
     public double getActualPosition() {
         return elevatorMotor.getEncoder().getPosition();
+    }
+
+    public double getArmActualPosition() {
+        return armMotor.getEncoder().getPosition();
     }
 
     public double getElevatorAppliedOutput() {
