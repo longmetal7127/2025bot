@@ -191,7 +191,7 @@ public class Robot extends TimedRobot {
     System.out.print("\n\nAUTO CALLED\n\n");
     final AutoRoutine routine = autoFactory.newRoutine("testauto");
 
-    final AutoTrajectory trajectory = routine.trajectory("testtraj");
+    final AutoTrajectory trajectory = routine.trajectory("path3");
 
     // entry point for the auto
     // resets the odometry to the starting position,
