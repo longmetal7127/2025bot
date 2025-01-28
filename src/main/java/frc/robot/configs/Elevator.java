@@ -37,7 +37,8 @@ public class Elevator {
             armConfig.closedLoop
                     .feedbackSensor(FeedbackSensor.kPrimaryEncoder)
                     // Set PID values for position control
-                    .p(0.02)
+                    .p(0.12)
+                    .d(0.06)
                     .outputRange(-1, 1).maxMotion
                     // Set MAXMotion parameters for position control
                     .maxVelocity(2000)
@@ -81,8 +82,8 @@ public class Elevator {
         public static final Distance kArmLength = Meters.of(0.45076397);
         public static final Mass kArmMass = Pounds.of(7.5258052);
         public static final double kArmReduction = 32; // TODO: double check
-        public static final double kMinAngleRads = 0;
-        public static final double kMaxAngleRads = 180;
+        public static final double kMinAngleRads = -8*Math.PI;
+        public static final double kMaxAngleRads = 8*Math.PI;
 
     }
 

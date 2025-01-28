@@ -19,6 +19,7 @@ import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
 
 import edu.wpi.first.epilogue.Logged;
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.system.plant.DCMotor;
@@ -32,8 +33,9 @@ import edu.wpi.first.wpilibj.smartdashboard.MechanismRoot2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.util.Color8Bit;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-
+import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.configs.Elevator.Setpoints;
 import frc.robot.configs.Elevator.CANIds;
 import frc.robot.configs.Elevator.Configs;
@@ -85,7 +87,7 @@ public class Elevator extends SubsystemBase {
             0.0);
 
     // Mechanism2d setup for subsystem
-    public final Mechanism2d m_mech2d = new Mechanism2d(5, 5);
+    public final Mechanism2d m_mech2d = new Mechanism2d(10, 10);
     private final MechanismRoot2d m_mech2dRoot = m_mech2d.getRoot("ElevatorArm Root", 25, 0);
     private final MechanismLigament2d m_elevatorStage1Mech2d = m_mech2dRoot.append(
             new MechanismLigament2d(
@@ -94,7 +96,7 @@ public class Elevator extends SubsystemBase {
                     90));
     private final MechanismLigament2d m_elevatorCarriageMech2d = m_elevatorStage1Mech2d.append(
             new MechanismLigament2d(
-                    "Elevator Carriage",
+                    "Elevator 6Carriage",
                     SimulationRobotConstants.kMinElevatorCarriageHeightMeters,
                     0));
 
@@ -154,10 +156,20 @@ public class Elevator extends SubsystemBase {
     }
 
     public Command setSetpointCommand(double setpoint, double armSetpoint) {
-        return this.runOnce(() -> {
-            this.elevatorCurrentTarget = setpoint;
-            this.armCurrentTarget = armSetpoint;
-        });
+        return Commands.sequence(
+                this.runOnce(() -> {
+                    this.armCurrentTarget = armSetpoint;
+                }),
+                Commands.waitUntil(
+                    new Trigger(() -> {
+                    return MathUtil.isNear(armSetpoint, armEncoder.getPosition(), 5);
+                })),
+                this.runOnce(() -> {
+                    this.elevatorCurrentTarget = setpoint;
+
+                })
+
+        );
     }
 
     @Override
@@ -231,7 +243,7 @@ public class Elevator extends SubsystemBase {
                         Rotation3d.kZero),
                 new Pose3d(-0.291779198, 0,
                         stage1Height + carriageHeight + 0.425256096,
-                        new Rotation3d(0, m_armMech2d.getAngle(), 0))
+                        new Rotation3d(0, Units.degreesToRadians(m_armMech2d.getAngle()), 0))
 
         };
         return poses;
