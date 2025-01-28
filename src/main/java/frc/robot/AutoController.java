@@ -38,6 +38,7 @@ public class AutoController implements Consumer<SwerveSample> {
 
     @Override
     public void accept(SwerveSample referenceState) {
+        System.out.println("\n\n\ncontroller\n\n\n");
         Pose2d pose = swerve.getPose();
         double xFF = referenceState.vx;
         double yFF = referenceState.vy;

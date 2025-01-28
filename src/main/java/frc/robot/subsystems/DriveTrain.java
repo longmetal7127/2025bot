@@ -174,7 +174,7 @@ public class DriveTrain extends SubsystemBase {
   }
 
   public Command cmdResetOdometry(Pose2d pose) {
-    return this.run(() -> {
+    return this.runOnce(() -> {
       resetOdometry(pose);
     });
   }
