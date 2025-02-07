@@ -16,10 +16,14 @@ import com.revrobotics.spark.SparkLowLevel.MotorType;
 
 import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.math.controller.ArmFeedforward;
 import edu.wpi.first.math.controller.ElevatorFeedforward;
+import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.system.plant.DCMotor;
+import edu.wpi.first.math.trajectory.TrapezoidProfile.Constraints;
+import edu.wpi.first.math.trajectory.TrapezoidProfile.State;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.Distance;
@@ -39,6 +43,7 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.configs.Elevator.Setpoints;
 import frc.robot.Robot;
+import frc.robot.configs.Elevator.ArmConstants;
 import frc.robot.configs.Elevator.CANIds;
 import frc.robot.configs.Elevator.Configs;
 import frc.robot.configs.Elevator.ElevatorConstants;
@@ -49,9 +54,18 @@ import static edu.wpi.first.units.Units.*;
 public class Elevator extends SubsystemBase {
 
         private SparkMax armMotor = new SparkMax(CANIds.kArmMotorCanId, MotorType.kBrushless);
-        private SparkClosedLoopController armController = armMotor.getClosedLoopController();
+        private final ProfiledPIDController m_armPIDController = new ProfiledPIDController(ArmConstants.kArmkP,
+                        ArmConstants.kArmkI,
+                        ArmConstants.kArmkD,
+                        new Constraints(ArmConstants.kArmMaxVelocityRPM,
+                                        ArmConstants.kArmMaxAccelerationRPMperSecond));;
+        private final ArmFeedforward m_armFeedforward = new ArmFeedforward(ArmConstants.kArmkS,
+                        ArmConstants.kArmkG,
+                        ArmConstants.kArmkV,
+                        ArmConstants.kArmkV);
+
         private RelativeEncoder armEncoder = armMotor.getEncoder();
-        ElevatorFeedforward m_feedforward = new ElevatorFeedforward(
+        ElevatorFeedforward m_ElevatorFeedforward = new ElevatorFeedforward(
                         ElevatorConstants.kElevatorkS,
                         ElevatorConstants.kElevatorkG,
                         ElevatorConstants.kElevatorkV,
@@ -186,8 +200,13 @@ public class Elevator extends SubsystemBase {
         private void moveToSetpoint() {
                 elevatorClosedLoopController.setReference(
                                 elevatorCurrentTarget, ControlType.kMAXMotionPositionControl, ClosedLoopSlot.kSlot0,
-                                m_feedforward.calculate(getVelocity().in(MetersPerSecond)));
-                armController.setReference(armCurrentTarget, ControlType.kMAXMotionPositionControl);
+                                m_ElevatorFeedforward.calculate(getVelocity().in(MetersPerSecond)));
+                double pidOutput = m_armPIDController.calculate(armEncoder.getPosition(),
+                                Units.degreesToRotations(armCurrentTarget) * SimulationRobotConstants.kArmReduction);
+                State setpointState = m_armPIDController.getSetpoint();
+                armMotor.setVoltage(pidOutput +
+                                m_armFeedforward.calculate(setpointState.position,
+                                                setpointState.velocity));
         }
 
         public Command incrementSetpointCommand(double setpoint) {
