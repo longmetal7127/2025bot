@@ -27,8 +27,10 @@ import edu.wpi.first.wpilibj2.command.button.CommandJoystick;
 import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
 import frc.robot.configs.Constants;
 import frc.robot.configs.Constants.OperatorConstants;
+import frc.robot.subsystems.Arm;
 import frc.robot.subsystems.DriveTrain;
 import frc.robot.subsystems.Elevator;
+import frc.robot.util.Tracer;
 
 /**
  * The VM is configured to automatically run this class, and to call the
@@ -44,10 +46,13 @@ public class Robot extends TimedRobot {
   private Command m_autonomousCommand;
   private DriveTrain driveTrain = new DriveTrain();
   private Elevator elevator = new Elevator();
+  private Arm arm = new Arm();
+
   private AutoFactory autoFactory;
   private final AutoChooser autoChooser;
   public static CommandJoystick joystick = new CommandJoystick(
       Constants.OperatorConstants.kDriverJoystickPort);
+  private final CommandScheduler scheduler = CommandScheduler.getInstance();
 
   /**
    * This function is run when the robot is first started up and should be used
@@ -107,10 +112,8 @@ public class Robot extends TimedRobot {
     }));
     joystick.button(1).onTrue(elevator.incrementSetpointCommand(1));
     joystick.button(2).onTrue(elevator.incrementSetpointCommand(-1));
-    joystick.button(3).onTrue(elevator.setSetpointCommand(0, (40)));
-    joystick.button(4).onTrue(elevator.setSetpointCommand(20, (135)));
-
-
+    joystick.button(3).onTrue(Commands.sequence(elevator.setSetpointCommand(0), arm.setSetpointCommand(40)));
+    joystick.button(4).onTrue(Commands.sequence(elevator.setSetpointCommand(30), arm.setSetpointCommand(135)));
 
   }
 
@@ -133,7 +136,8 @@ public class Robot extends TimedRobot {
     // and running subsystem periodic() methods. This must be called from the
     // robot's periodic
     // block in order for anything in the Command-based framework to work.
-    CommandScheduler.getInstance().run();
+    Tracer.traceFunc("CommandScheduler", scheduler::run);
+
   }
 
   /** This function is called once each time the robot enters Disabled mode. */

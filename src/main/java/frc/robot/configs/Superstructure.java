@@ -11,10 +11,13 @@ import com.revrobotics.spark.config.SparkMaxConfig;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.units.measure.Mass;
+import edu.wpi.first.wpilibj.smartdashboard.Mechanism2d;
+import edu.wpi.first.wpilibj.smartdashboard.MechanismLigament2d;
+import edu.wpi.first.wpilibj.smartdashboard.MechanismRoot2d;
 
 import static edu.wpi.first.units.Units.*;
 
-public class Elevator {
+public class Superstructure {
     public static final class CANIds {
         public static final int kElevatorMotorCanId = 9;
         public static final int kElevatorMotorFollowerCanId = 10;
@@ -62,16 +65,16 @@ public class Elevator {
         public static final double kArmkV = 0.762;
         public static final double kArmkA = 0.11;
 
-        public static final double kArmkP                     = 2.0691;
-        public static final double kArmkI                     = 0;
-        public static final double kArmkD                     = 0.0;
-    
+        public static final double kArmkP = 2.0691;
+        public static final double kArmkI = 0;
+        public static final double kArmkD = 0.0;
+
         public static final double kArmMaxVelocityRPM = 15;
         public static final double kArmMaxAccelerationRPMperSecond = 30;
 
     }
 
-    public static final class SimulationRobotConstants {
+    public static final class PhysicalRobotConstants {
         public static final double kElevatorGearing = 3.75; // 5:1 + 24:18
         public static final double kCarriageMass = 6.80388555;
         public static final double kElevatorDrumRadius = Units.inchesToMeters(2.5) / 2.0; // m
@@ -96,4 +99,25 @@ public class Elevator {
         public static final double kZero = 0;
     }
 
+    public static final class Mechanisms {
+        public static final Mechanism2d m_mech2d = new Mechanism2d(10, 10);
+        public static final MechanismRoot2d m_mech2dRoot = m_mech2d.getRoot("ElevatorArm Root", 25, 0);
+        public static final MechanismLigament2d m_elevatorStage1Mech2d = m_mech2dRoot.append(
+                new MechanismLigament2d(
+                        "Elevator Stage 1",
+                        PhysicalRobotConstants.kMinElevatorStage1HeightMeters,
+                        90));
+        public static final MechanismLigament2d m_elevatorCarriageMech2d = m_elevatorStage1Mech2d.append(
+                new MechanismLigament2d(
+                        "Elevator 6Carriage",
+                        PhysicalRobotConstants.kMinElevatorCarriageHeightMeters,
+                        0));
+
+        public static final MechanismLigament2d m_armMech2d = m_elevatorCarriageMech2d.append(
+                new MechanismLigament2d(
+                        "Arm",
+                        PhysicalRobotConstants.kArmLength.in(Meters),
+                        180 - Units.radiansToDegrees(PhysicalRobotConstants.kMinAngleRads) - 180));
+
+    }
 }

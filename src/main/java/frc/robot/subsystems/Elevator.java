@@ -15,56 +15,35 @@ import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
 
 import edu.wpi.first.epilogue.Logged;
-import edu.wpi.first.math.MathUtil;
-import edu.wpi.first.math.controller.ArmFeedforward;
 import edu.wpi.first.math.controller.ElevatorFeedforward;
-import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.system.plant.DCMotor;
-import edu.wpi.first.math.trajectory.TrapezoidProfile.Constraints;
-import edu.wpi.first.math.trajectory.TrapezoidProfile.State;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.units.measure.LinearVelocity;
 import edu.wpi.first.wpilibj.Notifier;
 import edu.wpi.first.wpilibj.RobotController;
+import frc.robot.util.Tracer;
 import edu.wpi.first.wpilibj.simulation.ElevatorSim;
-import edu.wpi.first.wpilibj.simulation.SingleJointedArmSim;
-import edu.wpi.first.wpilibj.smartdashboard.Mechanism2d;
-import edu.wpi.first.wpilibj.smartdashboard.MechanismLigament2d;
-import edu.wpi.first.wpilibj.smartdashboard.MechanismRoot2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.util.Color8Bit;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import edu.wpi.first.wpilibj2.command.button.Trigger;
-import frc.robot.configs.Elevator.Setpoints;
+import frc.robot.configs.Superstructure.Setpoints;
 import frc.robot.Robot;
-import frc.robot.configs.Elevator.ArmConstants;
-import frc.robot.configs.Elevator.CANIds;
-import frc.robot.configs.Elevator.Configs;
-import frc.robot.configs.Elevator.ElevatorConstants;
-import frc.robot.configs.Elevator.SimulationRobotConstants;
+import frc.robot.configs.Superstructure.CANIds;
+import frc.robot.configs.Superstructure.Configs;
+import frc.robot.configs.Superstructure.ElevatorConstants;
+import frc.robot.configs.Superstructure.Mechanisms;
+import frc.robot.configs.Superstructure.PhysicalRobotConstants;
 import static edu.wpi.first.units.Units.*;
 
 @Logged
 public class Elevator extends SubsystemBase {
 
-        private SparkMax armMotor = new SparkMax(CANIds.kArmMotorCanId, MotorType.kBrushless);
-        private final ProfiledPIDController m_armPIDController = new ProfiledPIDController(ArmConstants.kArmkP,
-                        ArmConstants.kArmkI,
-                        ArmConstants.kArmkD,
-                        new Constraints(ArmConstants.kArmMaxVelocityRPM,
-                                        ArmConstants.kArmMaxAccelerationRPMperSecond));;
-        private final ArmFeedforward m_armFeedforward = new ArmFeedforward(ArmConstants.kArmkS,
-                        ArmConstants.kArmkG,
-                        ArmConstants.kArmkV,
-                        ArmConstants.kArmkV);
-
-        private RelativeEncoder armEncoder = armMotor.getEncoder();
         ElevatorFeedforward m_ElevatorFeedforward = new ElevatorFeedforward(
                         ElevatorConstants.kElevatorkS,
                         ElevatorConstants.kElevatorkG,
@@ -78,58 +57,24 @@ public class Elevator extends SubsystemBase {
         private SparkMax elevatorFollowerMotor = new SparkMax(CANIds.kElevatorMotorFollowerCanId, MotorType.kBrushless);
 
         private double elevatorCurrentTarget = Setpoints.kZero;
-        private double armCurrentTarget = Setpoints.kZero;
         private Notifier simNotifier = null;
 
         private DCMotor elevatorMotorModel = DCMotor.getNEO(2);
         private SparkMaxSim elevatorMotorSim;
         private final ElevatorSim m_elevatorSim = new ElevatorSim(
                         elevatorMotorModel,
-                        SimulationRobotConstants.kElevatorGearing,
-                        SimulationRobotConstants.kCarriageMass,
-                        SimulationRobotConstants.kElevatorDrumRadius,
-                        SimulationRobotConstants.kMinElevatorCarriageHeightMeters,
-                        SimulationRobotConstants.kMaxElevatorStage1HeightMeters,
+                        PhysicalRobotConstants.kElevatorGearing,
+                        PhysicalRobotConstants.kCarriageMass,
+                        PhysicalRobotConstants.kElevatorDrumRadius,
+                        PhysicalRobotConstants.kMinElevatorCarriageHeightMeters,
+                        PhysicalRobotConstants.kMaxElevatorStage1HeightMeters,
                         true,
                         0,
                         0.0,
                         0.0);
 
-        private DCMotor armMotorModel = DCMotor.getNEO(1);
-        private SparkMaxSim armMotorSim;
-        private final SingleJointedArmSim m_armSim = new SingleJointedArmSim(
-                        armMotorModel,
-                        SimulationRobotConstants.kArmReduction,
-                        SingleJointedArmSim.estimateMOI(
-                                        SimulationRobotConstants.kArmLength.in(Meters),
-                                        SimulationRobotConstants.kArmMass.in(Kilograms)),
-                        SimulationRobotConstants.kArmLength.in(Meters),
-                        SimulationRobotConstants.kMinAngleRads,
-                        SimulationRobotConstants.kMaxAngleRads,
-                        true,
-                        SimulationRobotConstants.kMinAngleRads,
-                        0.0,
-                        0.0);
 
         // Mechanism2d setup for subsystem
-        public final Mechanism2d m_mech2d = new Mechanism2d(10, 10);
-        private final MechanismRoot2d m_mech2dRoot = m_mech2d.getRoot("ElevatorArm Root", 25, 0);
-        private final MechanismLigament2d m_elevatorStage1Mech2d = m_mech2dRoot.append(
-                        new MechanismLigament2d(
-                                        "Elevator Stage 1",
-                                        SimulationRobotConstants.kMinElevatorStage1HeightMeters,
-                                        90));
-        private final MechanismLigament2d m_elevatorCarriageMech2d = m_elevatorStage1Mech2d.append(
-                        new MechanismLigament2d(
-                                        "Elevator 6Carriage",
-                                        SimulationRobotConstants.kMinElevatorCarriageHeightMeters,
-                                        0));
-
-        private final MechanismLigament2d m_armMech2d = m_elevatorCarriageMech2d.append(
-                        new MechanismLigament2d(
-                                        "Arm",
-                                        SimulationRobotConstants.kArmLength.in(Meters),
-                                        180 - Units.radiansToDegrees(SimulationRobotConstants.kMinAngleRads) - 180));
 
         public Elevator() {
                 /*
@@ -142,10 +87,6 @@ public class Elevator extends SubsystemBase {
                  * the SPARK loses power. This is useful for power cycles that may occur
                  * mid-operation.
                  */
-                armMotor.configure(
-                                Configs.armConfig,
-                                ResetMode.kResetSafeParameters,
-                                PersistMode.kPersistParameters);
                 elevatorMotor.configure(
                                 Configs.elevatorConfig,
                                 ResetMode.kResetSafeParameters,
@@ -155,16 +96,14 @@ public class Elevator extends SubsystemBase {
                                 ResetMode.kResetSafeParameters,
                                 PersistMode.kPersistParameters);
 
-                SmartDashboard.putData("elevator.mech2d", m_mech2d);
+                SmartDashboard.putData("elevator.mech2d", Mechanisms.m_mech2d);
 
-                armEncoder.setPosition(0);
                 elevatorEncoder.setPosition(0);
 
                 // Initialize simulation values
                 elevatorMotorSim = new SparkMaxSim(elevatorMotor, elevatorMotorModel);
-                armMotorSim = new SparkMaxSim(armMotor, armMotorModel);
-                m_elevatorCarriageMech2d.setColor(new Color8Bit("#ff0000"));
-                m_elevatorStage1Mech2d.setColor(new Color8Bit("#00ff00"));
+                Mechanisms.m_elevatorCarriageMech2d.setColor(new Color8Bit("#ff0000"));
+                Mechanisms.m_elevatorStage1Mech2d.setColor(new Color8Bit("#00ff00"));
                 if (Robot.isSimulation()) {
                         simNotifier = new Notifier(() -> {
                                 updateSimState();
@@ -176,22 +115,14 @@ public class Elevator extends SubsystemBase {
 
         public void updateSimState() {
                 m_elevatorSim.setInput(elevatorMotor.getAppliedOutput() * RobotController.getBatteryVoltage());
-                m_armSim.setInput(armMotor.getAppliedOutput() * RobotController.getBatteryVoltage());
 
                 m_elevatorSim.update(0.0050);
-                m_armSim.update(0.0050);
 
                 elevatorMotorSim.iterate(
                                 ((m_elevatorSim.getVelocityMetersPerSecond()
-                                                / (SimulationRobotConstants.kElevatorDrumRadius * 2.0 * Math.PI))
-                                                * SimulationRobotConstants.kElevatorGearing)
+                                                / (PhysicalRobotConstants.kElevatorDrumRadius * 2.0 * Math.PI))
+                                                * PhysicalRobotConstants.kElevatorGearing)
                                                 * 60.0,
-                                RobotController.getBatteryVoltage(),
-                                0.005);
-                armMotorSim.iterate(
-                                Units.radiansPerSecondToRotationsPerMinute(
-                                                m_armSim.getVelocityRadPerSec()
-                                                                * SimulationRobotConstants.kArmReduction),
                                 RobotController.getBatteryVoltage(),
                                 0.005);
 
@@ -201,12 +132,6 @@ public class Elevator extends SubsystemBase {
                 elevatorClosedLoopController.setReference(
                                 elevatorCurrentTarget, ControlType.kMAXMotionPositionControl, ClosedLoopSlot.kSlot0,
                                 m_ElevatorFeedforward.calculate(getVelocity().in(MetersPerSecond)));
-                double pidOutput = m_armPIDController.calculate(armEncoder.getPosition(),
-                                Units.degreesToRotations(armCurrentTarget) * SimulationRobotConstants.kArmReduction);
-                State setpointState = m_armPIDController.getSetpoint();
-                armMotor.setVoltage(pidOutput +
-                                m_armFeedforward.calculate(setpointState.position,
-                                                setpointState.velocity));
         }
 
         public Command incrementSetpointCommand(double setpoint) {
@@ -215,19 +140,8 @@ public class Elevator extends SubsystemBase {
                 });
         }
 
-        public Command setSetpointCommand(double setpoint, double armSetpoint) {
+        public Command setSetpointCommand(double setpoint) {
                 return Commands.sequence(
-                                this.runOnce(() -> {
-                                        this.armCurrentTarget = armSetpoint;
-                                }),
-                                Commands.waitUntil(
-                                                new Trigger(() -> {
-                                                        return true;
-                                                        /*
-                                                         * return MathUtil.isNear(armSetpoint, armEncoder.getPosition(),
-                                                         * 5);
-                                                         */
-                                                })),
                                 this.runOnce(() -> {
                                         this.elevatorCurrentTarget = setpoint;
 
@@ -238,33 +152,27 @@ public class Elevator extends SubsystemBase {
 
         @Override
         public void periodic() {
+                Tracer.startTrace("ElevatorPeriodic");
                 moveToSetpoint();
-                double height = (elevatorEncoder.getPosition() / SimulationRobotConstants.kElevatorGearing)
-                                * (SimulationRobotConstants.kElevatorDrumRadius * 2.0 * Math.PI);
-                double carriageHeight = Math.min(SimulationRobotConstants.kCarriageTravelHeightMeters, height);
-                double stage1Height = (carriageHeight == SimulationRobotConstants.kCarriageTravelHeightMeters)
-                                ? height - SimulationRobotConstants.kCarriageTravelHeightMeters
+                double height = (elevatorEncoder.getPosition() / PhysicalRobotConstants.kElevatorGearing)
+                                * (PhysicalRobotConstants.kElevatorDrumRadius * 2.0 * Math.PI);
+                double carriageHeight = Math.min(PhysicalRobotConstants.kCarriageTravelHeightMeters, height);
+                double stage1Height = (carriageHeight == PhysicalRobotConstants.kCarriageTravelHeightMeters)
+                                ? height - PhysicalRobotConstants.kCarriageTravelHeightMeters
                                 : 0;
-                m_elevatorCarriageMech2d
-                                .setLength(SimulationRobotConstants.kMinElevatorCarriageHeightMeters
+                Mechanisms.m_elevatorCarriageMech2d
+                                .setLength(PhysicalRobotConstants.kMinElevatorCarriageHeightMeters
                                                 + carriageHeight);
-                m_elevatorStage1Mech2d
-                                .setLength(SimulationRobotConstants.kMinElevatorStage1HeightMeters
+                                                Mechanisms.m_elevatorStage1Mech2d
+                                .setLength(PhysicalRobotConstants.kMinElevatorStage1HeightMeters
                                                 + stage1Height);
 
-                m_armMech2d.setAngle(
-                                180
-                                                - (Units.radiansToDegrees(SimulationRobotConstants.kMinAngleRads)
-                                                                + Units.rotationsToDegrees(
-                                                                                armEncoder.getPosition()
-                                                                                                / SimulationRobotConstants.kArmReduction))
-                                                - 90);
-
+                Tracer.endTrace();
         }
 
         /** Get the current drawn by each simulation physics model */
         public double getSimulationCurrentDraw() {
-                return m_elevatorSim.getCurrentDrawAmps() + m_armSim.getCurrentDrawAmps();
+                return m_elevatorSim.getCurrentDrawAmps();
         }
 
         @Override
@@ -275,10 +183,10 @@ public class Elevator extends SubsystemBase {
         }
 
         public Pose3d[] getMechanismPoses() {
-                double stage1Height = m_elevatorStage1Mech2d.getLength()
-                                - SimulationRobotConstants.kMinElevatorStage1HeightMeters;
-                double carriageHeight = m_elevatorCarriageMech2d.getLength()
-                                - SimulationRobotConstants.kMinElevatorCarriageHeightMeters;
+                double stage1Height = Mechanisms.m_elevatorStage1Mech2d.getLength()
+                                - PhysicalRobotConstants.kMinElevatorStage1HeightMeters;
+                double carriageHeight = Mechanisms.m_elevatorCarriageMech2d.getLength()
+                                - PhysicalRobotConstants.kMinElevatorCarriageHeightMeters;
                 Pose3d[] poses = {
                                 new Pose3d(0, 0, stage1Height,
                                                 Rotation3d.kZero),
@@ -287,7 +195,7 @@ public class Elevator extends SubsystemBase {
                                                 Rotation3d.kZero),
                                 new Pose3d(-0.291779198, 0,
                                                 stage1Height + carriageHeight + 0.425256096,
-                                                new Rotation3d(0, Units.degreesToRadians(m_armMech2d.getAngle()), 0))
+                                                new Rotation3d(0, Units.degreesToRadians(Mechanisms.m_armMech2d.getAngle()), 0))
 
                 };
                 return poses;
@@ -297,17 +205,13 @@ public class Elevator extends SubsystemBase {
                 return elevatorMotor.getEncoder().getPosition();
         }
 
-        public double getArmActualPosition() {
-                return armMotor.getEncoder().getPosition();
-        }
-
         public double getElevatorAppliedOutput() {
                 return elevatorMotor.getAppliedOutput();
         }
 
         public static Distance convertRotationsToDistance(Angle rotations) {
-                return Meters.of((rotations.in(Rotations) / SimulationRobotConstants.kElevatorGearing) *
-                                (SimulationRobotConstants.kElevatorDrumRadius * 2 * Math.PI));
+                return Meters.of((rotations.in(Rotations) / PhysicalRobotConstants.kElevatorGearing) *
+                                (PhysicalRobotConstants.kElevatorDrumRadius * 2 * Math.PI));
         }
 
         public LinearVelocity getVelocity() {
