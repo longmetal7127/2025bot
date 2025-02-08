@@ -106,7 +106,7 @@ public class Robot extends TimedRobot {
   }
 
   public void configureBindings() {
-    joystick.trigger().onTrue(Commands.run(() -> {
+    joystick.trigger().onTrue(Commands.runOnce(() -> {
       driveTrain.zeroHeading();
     }));
     joystick.button(1).onTrue(elevator.incrementSetpointCommand(1));

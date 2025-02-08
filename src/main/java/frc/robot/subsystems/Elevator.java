@@ -6,11 +6,8 @@ package frc.robot.subsystems;
 
 import com.revrobotics.RelativeEncoder;
 import com.revrobotics.sim.SparkMaxSim;
-import com.revrobotics.spark.SparkBase.ControlType;
 import com.revrobotics.spark.SparkBase.PersistMode;
 import com.revrobotics.spark.SparkBase.ResetMode;
-import com.revrobotics.spark.ClosedLoopSlot;
-import com.revrobotics.spark.SparkClosedLoopController;
 import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
 
@@ -35,7 +32,6 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Robot;
-import frc.robot.constants.Superstructure.ArmConstants;
 import frc.robot.constants.Superstructure.CANIds;
 import frc.robot.constants.Superstructure.Configs;
 import frc.robot.constants.Superstructure.ElevatorConstants;
@@ -145,7 +141,11 @@ public class Elevator extends SubsystemBase {
         }
 
         public Command incrementSetpointCommand(double setpoint) {
+
                 return this.runOnce(() -> {
+                        if (Robot.isReal()) {
+                                return;
+                        }
                         this.elevatorCurrentTarget += setpoint;
                 });
         }
