@@ -2,7 +2,7 @@ package frc.robot;
 
 import java.util.function.Consumer;
 
-import frc.robot.configs.Swerve.AutoConstants;
+import frc.robot.constants.Swerve.AutoConstants;
 import frc.robot.subsystems.DriveTrain;
 
 import choreo.trajectory.SwerveSample;

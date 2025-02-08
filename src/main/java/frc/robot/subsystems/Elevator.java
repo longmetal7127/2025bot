@@ -16,9 +16,11 @@ import com.revrobotics.spark.SparkLowLevel.MotorType;
 
 import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.math.controller.ElevatorFeedforward;
+import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.system.plant.DCMotor;
+import edu.wpi.first.math.trajectory.TrapezoidProfile.Constraints;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.Distance;
@@ -32,26 +34,33 @@ import edu.wpi.first.wpilibj.util.Color8Bit;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import frc.robot.configs.Superstructure.Setpoints;
 import frc.robot.Robot;
-import frc.robot.configs.Superstructure.CANIds;
-import frc.robot.configs.Superstructure.Configs;
-import frc.robot.configs.Superstructure.ElevatorConstants;
-import frc.robot.configs.Superstructure.Mechanisms;
-import frc.robot.configs.Superstructure.PhysicalRobotConstants;
+import frc.robot.constants.Superstructure.ArmConstants;
+import frc.robot.constants.Superstructure.CANIds;
+import frc.robot.constants.Superstructure.Configs;
+import frc.robot.constants.Superstructure.ElevatorConstants;
+import frc.robot.constants.Superstructure.Mechanisms;
+import frc.robot.constants.Superstructure.PhysicalRobotConstants;
+import frc.robot.constants.Superstructure.Setpoints;
+
 import static edu.wpi.first.units.Units.*;
 
 @Logged
 public class Elevator extends SubsystemBase {
+        private final ProfiledPIDController m_elevatorPIDController = new ProfiledPIDController(
+                        ElevatorConstants.kElevatorkP,
+                        ElevatorConstants.kElevatorkI,
+                        ElevatorConstants.kElevatorkD,
+                        new Constraints(ElevatorConstants.kElevatorMaxVelocity,
+                                        ElevatorConstants.kElevatorMaxAcceleration));
 
-        ElevatorFeedforward m_ElevatorFeedforward = new ElevatorFeedforward(
+        private final ElevatorFeedforward m_ElevatorFeedforward = new ElevatorFeedforward(
                         ElevatorConstants.kElevatorkS,
                         ElevatorConstants.kElevatorkG,
                         ElevatorConstants.kElevatorkV,
                         ElevatorConstants.kElevatorkA);
 
         private SparkMax elevatorMotor = new SparkMax(CANIds.kElevatorMotorCanId, MotorType.kBrushless);
-        private SparkClosedLoopController elevatorClosedLoopController = elevatorMotor.getClosedLoopController();
         private RelativeEncoder elevatorEncoder = elevatorMotor.getEncoder();
 
         private SparkMax elevatorFollowerMotor = new SparkMax(CANIds.kElevatorMotorFollowerCanId, MotorType.kBrushless);
@@ -72,7 +81,6 @@ public class Elevator extends SubsystemBase {
                         0,
                         0.0,
                         0.0);
-
 
         // Mechanism2d setup for subsystem
 
@@ -129,9 +137,11 @@ public class Elevator extends SubsystemBase {
         }
 
         private void moveToSetpoint() {
-                elevatorClosedLoopController.setReference(
-                                elevatorCurrentTarget, ControlType.kMAXMotionPositionControl, ClosedLoopSlot.kSlot0,
-                                m_ElevatorFeedforward.calculate(getVelocity().in(MetersPerSecond)));
+                elevatorMotor.setVoltage(m_elevatorPIDController.calculate(
+                                convertRotationsToDistance(
+                                                Rotations.of(elevatorEncoder.getPosition())).in(Meters),
+                                elevatorCurrentTarget)
+                                + m_ElevatorFeedforward.calculate(m_elevatorPIDController.getSetpoint().velocity));
         }
 
         public Command incrementSetpointCommand(double setpoint) {
@@ -163,7 +173,7 @@ public class Elevator extends SubsystemBase {
                 Mechanisms.m_elevatorCarriageMech2d
                                 .setLength(PhysicalRobotConstants.kMinElevatorCarriageHeightMeters
                                                 + carriageHeight);
-                                                Mechanisms.m_elevatorStage1Mech2d
+                Mechanisms.m_elevatorStage1Mech2d
                                 .setLength(PhysicalRobotConstants.kMinElevatorStage1HeightMeters
                                                 + stage1Height);
 
@@ -195,7 +205,8 @@ public class Elevator extends SubsystemBase {
                                                 Rotation3d.kZero),
                                 new Pose3d(-0.291779198, 0,
                                                 stage1Height + carriageHeight + 0.425256096,
-                                                new Rotation3d(0, Units.degreesToRadians(Mechanisms.m_armMech2d.getAngle()), 0))
+                                                new Rotation3d(0, Units.degreesToRadians(
+                                                                Mechanisms.m_armMech2d.getAngle()), 0))
 
                 };
                 return poses;

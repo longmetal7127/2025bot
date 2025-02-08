@@ -2,7 +2,7 @@
 // Open Source Software; you can modify and/or share it under the terms of
 // the WPILib BSD license file in the root directory of this project.
 
-package frc.robot.configs;
+package frc.robot.constants;
 
 import com.revrobotics.spark.config.ClosedLoopConfig.FeedbackSensor;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
@@ -35,16 +35,6 @@ public class Superstructure {
             armConfig.idleMode(IdleMode.kBrake).smartCurrentLimit(40).voltageCompensation(12);
 
             elevatorConfig.idleMode(IdleMode.kBrake).smartCurrentLimit(60);// .voltageCompensation(12);
-
-            elevatorConfig.closedLoop
-                    .feedbackSensor(FeedbackSensor.kPrimaryEncoder)
-                    // Set PID values for position control
-                    .p(5)
-                    .d(0.23)
-                    .outputRange(-1, 1).maxMotion // Set MAXMotion parameters for position control
-                    .maxVelocity(4200)
-                    .maxAcceleration(6000);
-            // .allowedClosedLoopError(1);
             elevatorFollowerConfig.follow(CANIds.kElevatorMotorCanId);
 
         }
@@ -56,6 +46,14 @@ public class Superstructure {
         public static final double kElevatorkS = 0;
         public static final double kElevatorkV = 0.762;
         public static final double kElevatorkA = 0.11;
+
+        public static final double kElevatorkP = 5;
+        public static final double kElevatorkI = 0;
+        public static final double kElevatorkD = 0.23;
+
+        public static final double kElevatorMaxVelocity = Meters.of(4).per(Second).in(MetersPerSecond);;
+        public static final double kElevatorMaxAcceleration = Meters.of(8).per(Second).per(Second).in(MetersPerSecondPerSecond);
+        ;
 
     }
 

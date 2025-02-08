@@ -1,4 +1,4 @@
-package frc.robot.configs;
+package frc.robot.constants;
 
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;

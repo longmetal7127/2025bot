@@ -21,9 +21,9 @@ import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.Robot;
-import frc.robot.configs.Swerve;
-import frc.robot.configs.Swerve.DriveConstants;
-import frc.robot.configs.Swerve.CANIds;
+import frc.robot.constants.Swerve;
+import frc.robot.constants.Swerve.CANIds;
+import frc.robot.constants.Swerve.DriveConstants;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 

@@ -24,13 +24,14 @@ import frc.robot.util.Tracer;
 import edu.wpi.first.wpilibj.simulation.SingleJointedArmSim;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import frc.robot.configs.Superstructure.Setpoints;
 import frc.robot.Robot;
-import frc.robot.configs.Superstructure.ArmConstants;
-import frc.robot.configs.Superstructure.CANIds;
-import frc.robot.configs.Superstructure.Configs;
-import frc.robot.configs.Superstructure.Mechanisms;
-import frc.robot.configs.Superstructure.PhysicalRobotConstants;
+import frc.robot.constants.Superstructure.ArmConstants;
+import frc.robot.constants.Superstructure.CANIds;
+import frc.robot.constants.Superstructure.Configs;
+import frc.robot.constants.Superstructure.Mechanisms;
+import frc.robot.constants.Superstructure.PhysicalRobotConstants;
+import frc.robot.constants.Superstructure.Setpoints;
+
 import static edu.wpi.first.units.Units.*;
 
 @Logged

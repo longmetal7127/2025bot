@@ -24,9 +24,8 @@ import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandJoystick;
-import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
-import frc.robot.configs.Constants;
-import frc.robot.configs.Constants.OperatorConstants;
+import frc.robot.constants.Constants;
+import frc.robot.constants.Constants.OperatorConstants;
 import frc.robot.subsystems.Arm;
 import frc.robot.subsystems.DriveTrain;
 import frc.robot.subsystems.Elevator;
@@ -113,7 +112,7 @@ public class Robot extends TimedRobot {
     joystick.button(1).onTrue(elevator.incrementSetpointCommand(1));
     joystick.button(2).onTrue(elevator.incrementSetpointCommand(-1));
     joystick.button(3).onTrue(Commands.sequence(elevator.setSetpointCommand(0), arm.setSetpointCommand(40)));
-    joystick.button(4).onTrue(Commands.sequence(elevator.setSetpointCommand(30), arm.setSetpointCommand(135)));
+    joystick.button(4).onTrue(Commands.sequence(elevator.setSetpointCommand(1), arm.setSetpointCommand(135)));
 
   }
 
