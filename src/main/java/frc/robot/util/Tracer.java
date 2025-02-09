@@ -6,7 +6,6 @@ import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.Timer;
-
 import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
 import java.util.ArrayList;
@@ -42,7 +41,9 @@ import java.util.function.Supplier;
  * </code></pre>
  */
 public class Tracer {
+
   private static final class TraceStartData {
+
     private double m_startTime;
     private double m_startGCTotalTime;
 
@@ -57,6 +58,7 @@ public class Tracer {
    */
   @SuppressWarnings("PMD.RedundantFieldInitializer")
   private static final class TracerState {
+
     private final NetworkTable m_rootTable;
 
     /**
@@ -78,10 +80,12 @@ public class Tracer {
      * The start time of each trace and the gc time at the start of the trace, the key is the trace
      * name, modified every startTrace and endTrace.
      */
-    private final HashMap<String, TraceStartData> m_traceStartTimes = new HashMap<>();
+    private final HashMap<String, TraceStartData> m_traceStartTimes =
+      new HashMap<>();
 
     /** the publishers for each trace, the key is the trace name, modified every endCycle. */
-    private final HashMap<String, DoublePublisher> m_publishers = new HashMap<>();
+    private final HashMap<String, DoublePublisher> m_publishers =
+      new HashMap<>();
 
     /*
      * If the cycle is poisoned, it will warn the user
@@ -105,23 +109,27 @@ public class Tracer {
     int m_stackSize = 0;
 
     // the garbage collector beans
-    private final ArrayList<GarbageCollectorMXBean> m_gcs =
-        new ArrayList<>(ManagementFactory.getGarbageCollectorMXBeans());
+    private final ArrayList<GarbageCollectorMXBean> m_gcs = new ArrayList<>(
+      ManagementFactory.getGarbageCollectorMXBeans()
+    );
     private final DoublePublisher m_gcTimeEntry;
     private double m_gcTimeThisCycle = 0.0;
 
     private TracerState(String name, boolean threadLocalConstruction) {
       if (singleThreadedMode.get() && threadLocalConstruction) {
         DriverStation.reportError(
-            "[Tracer] Tracer is in single threaded mode, cannot start traces on multiple threads",
-            true);
+          "[Tracer] Tracer is in single threaded mode, cannot start traces on multiple threads",
+          true
+        );
         this.m_disabled = true;
       }
       anyTracesStarted.set(true);
       if (name == null) {
         this.m_rootTable = NetworkTableInstance.getDefault().getTable("Tracer");
       } else {
-        this.m_rootTable = NetworkTableInstance.getDefault().getTable("Tracer").getSubTable(name);
+        this.m_rootTable = NetworkTableInstance.getDefault()
+          .getTable("Tracer")
+          .getSubTable(name);
       }
       this.m_gcTimeEntry = m_rootTable.getDoubleTopic("GCTime").publish();
     }
@@ -149,7 +157,11 @@ public class Tracer {
       if (m_disabled) {
         return "";
       }
-      if (m_traceStack.isEmpty() || m_traceStackHistory.isEmpty() || m_cyclePoisoned) {
+      if (
+        m_traceStack.isEmpty() ||
+        m_traceStackHistory.isEmpty() ||
+        m_cyclePoisoned
+      ) {
         m_cyclePoisoned = true;
         return "";
       }
@@ -184,7 +196,9 @@ public class Tracer {
         }
         // create publishers for all new entries
         for (var traceTime : m_traceTimes.entrySet()) {
-          DoublePublisher publisher = m_rootTable.getDoubleTopic(traceTime.getKey()).publish();
+          DoublePublisher publisher = m_rootTable
+            .getDoubleTopic(traceTime.getKey())
+            .publish();
           publisher.set(traceTime.getValue());
           m_publishers.put(traceTime.getKey(), publisher);
         }
@@ -203,15 +217,21 @@ public class Tracer {
     }
   }
 
-  private static final AtomicBoolean singleThreadedMode = new AtomicBoolean(false);
-  private static final AtomicBoolean anyTracesStarted = new AtomicBoolean(false);
+  private static final AtomicBoolean singleThreadedMode = new AtomicBoolean(
+    false
+  );
+  private static final AtomicBoolean anyTracesStarted = new AtomicBoolean(
+    false
+  );
   private static final ThreadLocal<TracerState> threadLocalState =
-      ThreadLocal.withInitial(
-          () -> {
-            return new TracerState(Thread.currentThread().getName(), true);
-          });
+    ThreadLocal.withInitial(() -> {
+      return new TracerState(Thread.currentThread().getName(), true);
+    });
 
-  private static void startTraceInner(final String name, final TracerState state) {
+  private static void startTraceInner(
+    final String name,
+    final TracerState state
+  ) {
     String stack = state.appendTraceStack(name);
     if (state.m_disabled) {
       return;
@@ -229,16 +249,22 @@ public class Tracer {
     if (!state.m_disabled) {
       if (stack.isEmpty()) {
         DriverStation.reportError(
-            "[Tracer] Stack is empty,"
-                + "this means that there are more endTrace calls than startTrace calls",
-            true);
+          "[Tracer] Stack is empty," +
+          "this means that there are more endTrace calls than startTrace calls",
+          true
+        );
         return;
       }
       var startData = state.m_traceStartTimes.get(stack);
-      double gcTimeSinceStart = state.totalGCTime() - startData.m_startGCTotalTime;
+      double gcTimeSinceStart =
+        state.totalGCTime() - startData.m_startGCTotalTime;
       state.m_gcTimeThisCycle += gcTimeSinceStart;
       state.m_traceTimes.put(
-          stack, Timer.getFPGATimestamp() * 1_000.0 - startData.m_startTime - gcTimeSinceStart);
+        stack,
+        Timer.getFPGATimestamp() * 1_000.0 -
+        startData.m_startTime -
+        gcTimeSinceStart
+      );
     }
     if (state.m_traceStack.isEmpty()) {
       state.endCycle();
@@ -288,7 +314,9 @@ public class Tracer {
   public static void enableSingleThreadedMode() {
     if (anyTracesStarted.get()) {
       DriverStation.reportError(
-          "[Tracer] Cannot enable single-threaded mode after traces have been started", true);
+        "[Tracer] Cannot enable single-threaded mode after traces have been started",
+        true
+      );
     } else {
       threadLocalState.set(new TracerState(null, false));
       singleThreadedMode.set(true);
@@ -368,6 +396,7 @@ public class Tracer {
    * synchronously on the same thread.
    */
   public static class SubstitutiveTracer {
+
     private final TracerState m_state;
     private final TracerState m_originalState;
 
@@ -497,8 +526,9 @@ public class Tracer {
     if (now - m_lastEpochsPrintTime > kMinPrintPeriod) {
       StringBuilder sb = new StringBuilder();
       m_lastEpochsPrintTime = now;
-      m_epochs.forEach(
-          (key, value) -> sb.append(String.format("\t%s: %.6fs\n", key, value / 1.0e6)));
+      m_epochs.forEach((key, value) ->
+        sb.append(String.format("\t%s: %.6fs\n", key, value / 1.0e6))
+      );
       if (sb.length() > 0) {
         output.accept(sb.toString());
       }
