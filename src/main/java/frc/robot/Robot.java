@@ -4,7 +4,6 @@
 
 package frc.robot;
 
-
 import org.littletonrobotics.urcl.URCL;
 
 import choreo.auto.AutoChooser;
@@ -18,11 +17,13 @@ import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.wpilibj.TimedRobot;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandJoystick;
+import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
 import frc.robot.configs.Constants;
 import frc.robot.configs.Constants.OperatorConstants;
 import frc.robot.subsystems.DriveTrain;
@@ -41,7 +42,7 @@ public class Robot extends TimedRobot {
   private Command m_autonomousCommand;
   private DriveTrain driveTrain = new DriveTrain();
   private AutoFactory autoFactory;
-  private AutoChooser autoChooser;
+  private final AutoChooser autoChooser;
   public static CommandJoystick joystick = new CommandJoystick(
       Constants.OperatorConstants.kDriverJoystickPort);
 
@@ -60,7 +61,10 @@ public class Robot extends TimedRobot {
         true, driveTrain);
     configureBindings();
     autoChooser = new AutoChooser();
-    autoChooser.addRoutine("auto", this::auto);
+
+    autoChooser.addRoutine("testauto", this::auto);
+    SmartDashboard.putData("hiii", autoChooser);
+    RobotModeTriggers.autonomous().whileTrue(autoChooser.selectedCommandScheduler());
 
     driveTrain.setDefaultCommand(
         new RunCommand(
@@ -72,8 +76,10 @@ public class Robot extends TimedRobot {
               double y = joystick.getY();
 
               // limiting x/y on input methods
-              x = Math.sin(Math.atan2(x, y)) * Math.min(Math.max(Math.abs(y), Math.abs(x)), 1);
-              y = Math.cos(Math.atan2(x, y)) * Math.min(Math.max(Math.abs(y), Math.abs(x)), 1);
+              // x = Math.sin(Math.atan2(x, y)) * Math.min(Math.max(Math.abs(y), Math.abs(x)),
+              // 1);
+              // y = Math.cos(Math.atan2(x, y)) * Math.min(Math.max(Math.abs(y), Math.abs(x)),
+              // 1);
               double deadband = OperatorConstants.kLogitech ? OperatorConstants.kLogitechDeadband
                   : OperatorConstants.kDriveDeadband;
 
@@ -135,12 +141,7 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void autonomousInit() {
-    m_autonomousCommand = getAutonomousCommand();
 
-    // schedule the autonomous command (example)
-    if (m_autonomousCommand != null) {
-      m_autonomousCommand.schedule();
-    }
   }
 
   /** This function is called periodically during autonomous. */
@@ -175,7 +176,6 @@ public class Robot extends TimedRobot {
   public void testPeriodic() {
   }
 
-
   /** This function is called once when the robot is first started up. */
   @Override
   public void simulationInit() {
@@ -187,31 +187,29 @@ public class Robot extends TimedRobot {
   public void simulationPeriodic() {
   }
 
-  public Command getAutonomousCommand() {
-    return Commands.run(() -> {
-
-    });
-  }
-
   public AutoRoutine auto() {
-    final AutoRoutine routine = autoFactory.newRoutine("auto");
+    System.out.print("\n\nAUTO CALLED\n\n");
+    final AutoRoutine routine = autoFactory.newRoutine("testauto");
 
-    final AutoTrajectory trajectory = routine.trajectory("auto");
+    final AutoTrajectory trajectory = routine.trajectory("path3");
 
     // entry point for the auto
     // resets the odometry to the starting position,
     // then shoots the starting note,
     // then runs the trajectory to the first close note while extending the intake
     routine.active()
-        .onTrue(
+        .onTrue(Commands.sequence(
+          Commands.print("routive activeeee"),
             driveTrain.cmdResetOdometry(
                 trajectory.getInitialPose()
                     .orElseGet(
                         () -> {
+                          System.out.println("hi");
                           routine.kill();
                           return new Pose2d();
                         }))
-                .withName("auto entry point"));
+                .withName("auto entry point"),
+            trajectory.cmd()));
 
     return routine;
   }

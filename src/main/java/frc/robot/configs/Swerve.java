@@ -77,7 +77,7 @@ public class Swerve {
         public static final double kFreeSpeedRpm = 6784;
     }
 
-      
+    
     public static final class ModuleConfigs {
         public static final SparkMaxConfig drivingConfig = new SparkMaxConfig();
         public static final SparkMaxConfig turningConfig = new SparkMaxConfig();
