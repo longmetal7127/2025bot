@@ -202,18 +202,6 @@ public class Swerve {
                     .positionWrappingInputRange(0, turningFactor);
         }
     }
-    public static final class AutoConstants {
-        public static final class kTranslation {
-            public static final double kP = 3.4;
-            public static final double kI = 0.0;
-            public static final double kD = 0.0;
-        }
-        public static final class kRotation {
-            public static final double kP = 3.0;
-            public static final double kI = 0.0;
-            public static final double kD = 0.0;
-        }
     }
 
-}
 }

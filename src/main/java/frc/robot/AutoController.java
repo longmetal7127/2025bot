@@ -55,27 +55,6 @@ public class AutoController implements Consumer<SwerveSample> {
       rotationFF + rotationFeedback,
       pose.getRotation()
     );
+  }
 
-    @Override
-    public void accept(SwerveSample referenceState) {
-        System.out.println("\n\n\ncontroller\n\n\n");
-        Pose2d pose = swerve.getPose();
-        double xFF = referenceState.vx;
-        double yFF = referenceState.vy;
-        double rotationFF = referenceState.omega;
-
-        double xFeedback = xController.calculate(pose.getX(), referenceState.x);
-        double yFeedback = yController.calculate(pose.getY(), referenceState.y);
-        double rotationFeedback = rController.calculate(pose.getRotation().getRadians(),
-            referenceState.heading);
-
-        ChassisSpeeds out = ChassisSpeeds.fromFieldRelativeSpeeds(
-            xFF + xFeedback,
-            yFF + yFeedback,
-            rotationFF + rotationFeedback,
-            pose.getRotation()
-        );
-
-        swerve.setChassisSpeeds(out);
-    }
 }
