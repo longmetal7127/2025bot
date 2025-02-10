@@ -122,7 +122,7 @@ public class Robot extends TimedRobot {
       .onTrue(
         Commands.sequence(
           elevator.setSetpointCommand(0),
-          arm.setSetpointCommand(40)
+          arm.setSetpointCommand(0)
         )
       );
     joystick

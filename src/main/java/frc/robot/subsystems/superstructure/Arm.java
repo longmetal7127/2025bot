@@ -35,27 +35,35 @@ import frc.robot.util.Tracer;
 
 @Logged
 public class Arm extends SubsystemBase {
+  public enum ArmState {
+    LevelNormal(35),
+    Level4(45),
+    Handoff(5),
+    Safe(5);
+
+    public double angle;
+
+    ArmState(double angle) {
+      this.angle = angle;
+    }
+
+  }
 
   private SparkMax armMotor = new SparkMax(
-    CANIds.kArmMotorCanId,
-    MotorType.kBrushless
-  );
-  private final ProfiledPIDController m_armPIDController =
-    new ProfiledPIDController(
+      CANIds.kArmMotorCanId,
+      MotorType.kBrushless);
+  private final ProfiledPIDController m_armPIDController = new ProfiledPIDController(
       ArmConstants.kArmkP,
       ArmConstants.kArmkI,
       ArmConstants.kArmkD,
       new Constraints(
-        ArmConstants.kArmMaxVelocityRPM,
-        ArmConstants.kArmMaxAccelerationRPMperSecond
-      )
-    );
+          ArmConstants.kArmMaxVelocityRPM,
+          ArmConstants.kArmMaxAccelerationRPMperSecond));
   private final ArmFeedforward m_armFeedforward = new ArmFeedforward(
-    ArmConstants.kArmkS,
-    ArmConstants.kArmkG,
-    ArmConstants.kArmkV,
-    ArmConstants.kArmkV
-  );
+      ArmConstants.kArmkS,
+      ArmConstants.kArmkG,
+      ArmConstants.kArmkV,
+      ArmConstants.kArmkV);
 
   private RelativeEncoder armEncoder = armMotor.getEncoder();
 
@@ -65,20 +73,18 @@ public class Arm extends SubsystemBase {
   private DCMotor armMotorModel = DCMotor.getNEO(1);
   private SparkMaxSim armMotorSim;
   private final SingleJointedArmSim m_armSim = new SingleJointedArmSim(
-    armMotorModel,
-    PhysicalRobotConstants.kArmReduction,
-    SingleJointedArmSim.estimateMOI(
+      armMotorModel,
+      PhysicalRobotConstants.kArmReduction,
+      SingleJointedArmSim.estimateMOI(
+          PhysicalRobotConstants.kArmLength.in(Meters),
+          PhysicalRobotConstants.kArmMass.in(Kilograms)),
       PhysicalRobotConstants.kArmLength.in(Meters),
-      PhysicalRobotConstants.kArmMass.in(Kilograms)
-    ),
-    PhysicalRobotConstants.kArmLength.in(Meters),
-    PhysicalRobotConstants.kMinAngleRads,
-    PhysicalRobotConstants.kMaxAngleRads,
-    true,
-    PhysicalRobotConstants.kMinAngleRads,
-    0.0,
-    0.0
-  );
+      PhysicalRobotConstants.kMinAngleRads,
+      PhysicalRobotConstants.kMaxAngleRads,
+      true,
+      PhysicalRobotConstants.kMinAngleRads,
+      0.0,
+      0.0);
 
   // Mechanism2d setup for subsystem
 
@@ -94,10 +100,9 @@ public class Arm extends SubsystemBase {
      * mid-operation.
      */
     armMotor.configure(
-      Configs.armConfig,
-      ResetMode.kResetSafeParameters,
-      PersistMode.kPersistParameters
-    );
+        Configs.armConfig,
+        ResetMode.kResetSafeParameters,
+        PersistMode.kPersistParameters);
 
     armEncoder.setPosition(0);
 
@@ -113,37 +118,32 @@ public class Arm extends SubsystemBase {
 
   public void updateSimState() {
     m_armSim.setInput(
-      armMotor.getAppliedOutput() * RobotController.getBatteryVoltage()
-    );
+        armMotor.getAppliedOutput() * RobotController.getBatteryVoltage());
 
     m_armSim.update(0.0050);
 
     armMotorSim.iterate(
-      Units.radiansPerSecondToRotationsPerMinute(
-        m_armSim.getVelocityRadPerSec() * PhysicalRobotConstants.kArmReduction
-      ),
-      RobotController.getBatteryVoltage(),
-      0.005
-    );
+        Units.radiansPerSecondToRotationsPerMinute(
+            m_armSim.getVelocityRadPerSec() * PhysicalRobotConstants.kArmReduction),
+        RobotController.getBatteryVoltage(),
+        0.005);
   }
 
   private void moveToSetpoint() {
     double pidOutput = m_armPIDController.calculate(
-      armEncoder.getPosition(),
-      Units.degreesToRotations(armCurrentTarget) *
-      PhysicalRobotConstants.kArmReduction
-    );
+        armEncoder.getPosition(),
+        Units.degreesToRotations(armCurrentTarget) *
+            PhysicalRobotConstants.kArmReduction);
     State setpointState = m_armPIDController.getSetpoint();
     armMotor.setVoltage(
-      pidOutput +
-      m_armFeedforward.calculate(setpointState.position, setpointState.velocity)
-    );
+        pidOutput +
+            m_armFeedforward.calculate(setpointState.position, setpointState.velocity));
   }
 
   public Command setSetpointCommand(double armSetpoint) {
     return this.runOnce(() -> {
-        this.armCurrentTarget = armSetpoint;
-      });
+      this.armCurrentTarget = armSetpoint;
+    });
   }
 
   @Override
@@ -152,13 +152,12 @@ public class Arm extends SubsystemBase {
     moveToSetpoint();
 
     Mechanisms.m_armMech2d.setAngle(
-      180 -
-      (Units.radiansToDegrees(PhysicalRobotConstants.kMinAngleRads) +
-        Units.rotationsToDegrees(
-          armEncoder.getPosition() / PhysicalRobotConstants.kArmReduction
-        )) -
-      90
-    );
+        180 -
+            (Units.radiansToDegrees(PhysicalRobotConstants.kMinAngleRads) +
+                Units.rotationsToDegrees(
+                    armEncoder.getPosition() / PhysicalRobotConstants.kArmReduction))
+            -
+            90);
     Tracer.endTrace();
   }
 
@@ -168,7 +167,8 @@ public class Arm extends SubsystemBase {
   }
 
   @Override
-  public void simulationPeriodic() {}
+  public void simulationPeriodic() {
+  }
 
   public double getArmActualPosition() {
     return armMotor.getEncoder().getPosition();

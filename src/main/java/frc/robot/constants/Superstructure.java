@@ -6,7 +6,6 @@ package frc.robot.constants;
 
 import static edu.wpi.first.units.Units.*;
 
-import com.revrobotics.spark.config.ClosedLoopConfig.FeedbackSensor;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.config.SparkMaxConfig;
 import edu.wpi.first.math.util.Units;
@@ -30,15 +29,14 @@ public class Superstructure {
 
     public static final SparkMaxConfig armConfig = new SparkMaxConfig();
     public static final SparkMaxConfig elevatorConfig = new SparkMaxConfig();
-    public static final SparkMaxConfig elevatorFollowerConfig =
-      new SparkMaxConfig();
+    public static final SparkMaxConfig elevatorFollowerConfig = new SparkMaxConfig();
 
     static {
       // Configure basic settings of the arm motor
       armConfig
-        .idleMode(IdleMode.kBrake)
-        .smartCurrentLimit(40)
-        .voltageCompensation(12);
+          .idleMode(IdleMode.kBrake)
+          .smartCurrentLimit(40)
+          .voltageCompensation(12);
 
       elevatorConfig.idleMode(IdleMode.kBrake).smartCurrentLimit(60); // .voltageCompensation(12);
       elevatorFollowerConfig.follow(CANIds.kElevatorMotorCanId);
@@ -57,12 +55,12 @@ public class Superstructure {
     public static final double kElevatorkD = 0.23;
 
     public static final double kElevatorMaxVelocity = Meters.of(4)
-      .per(Second)
-      .in(MetersPerSecond);
+        .per(Second)
+        .in(MetersPerSecond);
     public static final double kElevatorMaxAcceleration = Meters.of(8)
-      .per(Second)
-      .per(Second)
-      .in(MetersPerSecondPerSecond);
+        .per(Second)
+        .per(Second)
+        .in(MetersPerSecondPerSecond);
   }
 
   public static final class ArmConstants {
@@ -84,16 +82,15 @@ public class Superstructure {
 
     public static final double kElevatorGearing = 3.75; // 5:1 + 24:18
     public static final double kCarriageMass = 6.80388555;
-    public static final double kElevatorDrumRadius =
-      Units.inchesToMeters(2.5) / 2.0; // m
+    public static final double kElevatorDrumRadius = Units.inchesToMeters(2.5) / 2.0; // m
     public static final double kMinElevatorCarriageHeightMeters = 0.2286; // m
     public static final double kMinElevatorStage1HeightMeters = 0.9652; // m
     public static final double kMaxElevatorCarriageHeightMeters = 0.9144; // m
     public static final double kMaxElevatorStage1HeightMeters = 1.72794689; // m
-    public static final double kCarriageTravelHeightMeters =
-      kMaxElevatorCarriageHeightMeters - kMinElevatorCarriageHeightMeters;
-    public static final double kStage1TravelHeightMeters =
-      kMaxElevatorStage1HeightMeters - kMinElevatorStage1HeightMeters;
+    public static final double kCarriageTravelHeightMeters = kMaxElevatorCarriageHeightMeters
+        - kMinElevatorCarriageHeightMeters;
+    public static final double kStage1TravelHeightMeters = kMaxElevatorStage1HeightMeters
+        - kMinElevatorStage1HeightMeters;
 
     public static final Distance kArmLength = Meters.of(0.45076397);
     public static final Mass kArmMass = Pounds.of(7.5258052);
@@ -111,36 +108,26 @@ public class Superstructure {
 
     public static final Mechanism2d m_mech2d = new Mechanism2d(10, 10);
     public static final MechanismRoot2d m_mech2dRoot = m_mech2d.getRoot(
-      "ElevatorArm Root",
-      25,
-      0
-    );
-    public static final MechanismLigament2d m_elevatorStage1Mech2d =
-      m_mech2dRoot.append(
+        "ElevatorArm Root",
+        25,
+        0);
+    public static final MechanismLigament2d m_elevatorStage1Mech2d = m_mech2dRoot.append(
         new MechanismLigament2d(
-          "Elevator Stage 1",
-          PhysicalRobotConstants.kMinElevatorStage1HeightMeters,
-          90
-        )
-      );
-    public static final MechanismLigament2d m_elevatorCarriageMech2d =
-      m_elevatorStage1Mech2d.append(
+            "Elevator Stage 1",
+            PhysicalRobotConstants.kMinElevatorStage1HeightMeters,
+            90));
+    public static final MechanismLigament2d m_elevatorCarriageMech2d = m_elevatorStage1Mech2d.append(
         new MechanismLigament2d(
-          "Elevator 6Carriage",
-          PhysicalRobotConstants.kMinElevatorCarriageHeightMeters,
-          0
-        )
-      );
+            "Elevator 6Carriage",
+            PhysicalRobotConstants.kMinElevatorCarriageHeightMeters,
+            0));
 
-    public static final MechanismLigament2d m_armMech2d =
-      m_elevatorCarriageMech2d.append(
+    public static final MechanismLigament2d m_armMech2d = m_elevatorCarriageMech2d.append(
         new MechanismLigament2d(
-          "Arm",
-          PhysicalRobotConstants.kArmLength.in(Meters),
-          180 -
-          Units.radiansToDegrees(PhysicalRobotConstants.kMinAngleRads) -
-          180
-        )
-      );
+            "Arm",
+            PhysicalRobotConstants.kArmLength.in(Meters),
+            180 -
+                Units.radiansToDegrees(PhysicalRobotConstants.kMinAngleRads) -
+                180));
   }
 }
