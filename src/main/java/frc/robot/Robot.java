@@ -24,7 +24,9 @@ import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
 import frc.robot.constants.Constants;
 import frc.robot.constants.Constants.OperatorConstants;
 import frc.robot.subsystems.DriveTrain;
-import frc.robot.subsystems.superstructure.Arm;
+import frc.robot.subsystems.superstructure.Wrist;
+import frc.robot.subsystems.superstructure.Elevator.ElevatorState;
+import frc.robot.subsystems.superstructure.Wrist.WristState;
 import frc.robot.subsystems.superstructure.Elevator;
 import frc.robot.util.Tracer;
 import org.littletonrobotics.urcl.URCL;
@@ -44,13 +46,12 @@ public class Robot extends TimedRobot {
   private Command m_autonomousCommand;
   private DriveTrain driveTrain = new DriveTrain();
   private Elevator elevator = new Elevator();
-  private Arm arm = new Arm();
+  private Wrist Wrist = new Wrist();
 
   private AutoFactory autoFactory;
   private final AutoChooser autoChooser;
   public static CommandJoystick joystick = new CommandJoystick(
-    Constants.OperatorConstants.kDriverJoystickPort
-  );
+      Constants.OperatorConstants.kDriverJoystickPort);
   private final CommandScheduler scheduler = CommandScheduler.getInstance();
 
   /**
@@ -62,12 +63,11 @@ public class Robot extends TimedRobot {
     DataLogManager.start();
     URCL.start();
     autoFactory = new AutoFactory(
-      driveTrain::getPose,
-      driveTrain::resetOdometry,
-      new AutoController(driveTrain),
-      true,
-      driveTrain
-    );
+        driveTrain::getPose,
+        driveTrain::resetOdometry,
+        new AutoController(driveTrain),
+        true,
+        driveTrain);
     configureBindings();
     autoChooser = new AutoChooser();
 
@@ -76,63 +76,64 @@ public class Robot extends TimedRobot {
     RobotModeTriggers.autonomous().whileTrue(autoChooser.selectedCommandScheduler());
 
     driveTrain.setDefaultCommand(
-      new RunCommand(
-        () -> {
-          double multiplier = (((joystick.getThrottle() * -1) + 1) / 2); // turbo mode
-          double z = joystick.getZ();
-          double x = joystick.getX();
-          double y = joystick.getY();
+        new RunCommand(
+            () -> {
+              double multiplier = (((joystick.getThrottle() * -1) + 1) / 2); // turbo mode
+              double z = joystick.getZ();
+              double x = joystick.getX();
+              double y = joystick.getY();
 
-          // limiting x/y on input methods
-          x =
-            Math.sin(Math.atan2(x, y)) *
-            Math.min(Math.max(Math.abs(y), Math.abs(x)), 1);
-          y =
-            Math.cos(Math.atan2(x, y)) *
-            Math.min(Math.max(Math.abs(y), Math.abs(x)), 1);
-          double deadband = OperatorConstants.kLogitech
-            ? OperatorConstants.kLogitechDeadband
-            : OperatorConstants.kDriveDeadband;
+              // limiting x/y on input methods
+              x = Math.sin(Math.atan2(x, y)) *
+                  Math.min(Math.max(Math.abs(y), Math.abs(x)), 1);
+              y = Math.cos(Math.atan2(x, y)) *
+                  Math.min(Math.max(Math.abs(y), Math.abs(x)), 1);
+              double deadband = OperatorConstants.kLogitech
+                  ? OperatorConstants.kLogitechDeadband
+                  : OperatorConstants.kDriveDeadband;
 
-          driveTrain.drive(
-            MathUtil.applyDeadband(y * -multiplier, deadband),
-            MathUtil.applyDeadband(x * -multiplier, deadband),
-            MathUtil.applyDeadband(z * -1, deadband),
-            true
-          );
-        },
-        driveTrain
-      )
-    );
+              driveTrain.drive(
+                  MathUtil.applyDeadband(y * -multiplier, deadband),
+                  MathUtil.applyDeadband(x * -multiplier, deadband),
+                  MathUtil.applyDeadband(z * -1, deadband),
+                  true);
+            },
+            driveTrain));
     Epilogue.bind(this);
   }
 
   public void configureBindings() {
     joystick
-      .trigger()
-      .onTrue(
-        Commands.runOnce(() -> {
-          driveTrain.zeroHeading();
-        })
-      );
-    joystick.button(1).onTrue(elevator.incrementSetpointCommand(1));
-    joystick.button(2).onTrue(elevator.incrementSetpointCommand(-1));
+        .trigger()
+        .onTrue(
+            Commands.runOnce(() -> {
+              driveTrain.zeroHeading();
+            }));
     joystick
-      .button(3)
-      .onTrue(
-        Commands.sequence(
-          elevator.setSetpointCommand(0),
-          arm.setSetpointCommand(0)
-        )
-      );
+        .button(3)
+        .onTrue(
+            Commands.sequence(
+                Wrist.setSetpointCommand(WristState.Safe),
+                Commands.waitUntil(Wrist.atAngle(WristState.Safe.angle, 4)),
+
+                elevator.setSetpointCommand(ElevatorState.Level3)));
     joystick
-      .button(4)
-      .onTrue(
-        Commands.sequence(
-          elevator.setSetpointCommand(1),
-          arm.setSetpointCommand(135)
-        )
-      );
+        .button(2)
+        .onTrue(
+            Commands.sequence(
+                Wrist.setSetpointCommand(WristState.Safe),
+                Commands.waitUntil(Wrist.atAngle(WristState.Safe.angle, 4)),
+
+                elevator.setSetpointCommand(ElevatorState.Min)));
+    joystick
+        .button(4)
+        .onTrue(
+            Commands.sequence(
+                Wrist.setSetpointCommand(WristState.Safe),
+                Commands.waitUntil(Wrist.atAngle(WristState.Safe.angle, 4)),
+
+                elevator.setSetpointCommand(ElevatorState.Level4)));
+    //joystick.button(6).onTrue(Wrist.runSysIdRoutine());
   }
 
   /**
@@ -159,10 +160,12 @@ public class Robot extends TimedRobot {
 
   /** This function is called once each time the robot enters Disabled mode. */
   @Override
-  public void disabledInit() {}
+  public void disabledInit() {
+  }
 
   @Override
-  public void disabledPeriodic() {}
+  public void disabledPeriodic() {
+  }
 
   /**
    * This autonomous runs the autonomous command selected by your
@@ -175,7 +178,8 @@ public class Robot extends TimedRobot {
 
   /** This function is called periodically during autonomous. */
   @Override
-  public void autonomousPeriodic() {}
+  public void autonomousPeriodic() {
+  }
 
   @Override
   public void teleopInit() {
@@ -190,7 +194,8 @@ public class Robot extends TimedRobot {
 
   /** This function is called periodically during operator control. */
   @Override
-  public void teleopPeriodic() {}
+  public void teleopPeriodic() {
+  }
 
   @Override
   public void testInit() {
@@ -200,19 +205,23 @@ public class Robot extends TimedRobot {
 
   /** This function is called periodically during test mode. */
   @Override
-  public void testPeriodic() {}
+  public void testPeriodic() {
+  }
 
   /** This function is called once when the robot is first started up. */
   @Override
-  public void simulationInit() {}
+  public void simulationInit() {
+  }
 
   /** This function is called periodically whilst in simulation. */
   // simulation period method in your Robot.java
   @Override
-  public void simulationPeriodic() {}
+  public void simulationPeriodic() {
+  }
 
   public Command getAutonomousCommand() {
-    return Commands.run(() -> {});
+    return Commands.run(() -> {
+    });
   }
 
   public AutoRoutine auto() {
@@ -226,24 +235,23 @@ public class Robot extends TimedRobot {
     // then shoots the starting note,
     // then runs the trajectory to the first close note while extending the intake
     routine
-      .active()
-      .onTrue(
-        driveTrain
-          .cmdResetOdometry(
-            trajectory
-              .getInitialPose()
-              .orElseGet(() -> {
-                routine.kill();
-                return new Pose2d();
-              })
-          )
-          .withName("auto entry point")
-      );
+        .active()
+        .onTrue(
+            driveTrain
+                .cmdResetOdometry(
+                    trajectory
+                        .getInitialPose()
+                        .orElseGet(() -> {
+                          routine.kill();
+                          return new Pose2d();
+                        }))
+                .withName("auto entry point"));
 
     return routine;
   }
 
   public Command goSomewhere() {
-    return Commands.run(() -> {});
+    return Commands.run(() -> {
+    });
   }
 }

@@ -23,6 +23,10 @@ import edu.wpi.first.math.util.Units;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.units.measure.LinearVelocity;
+import edu.wpi.first.units.measure.MutAngle;
+import edu.wpi.first.units.measure.MutDistance;
+import edu.wpi.first.units.measure.MutLinearVelocity;
+import edu.wpi.first.units.measure.MutVoltage;
 import edu.wpi.first.wpilibj.Notifier;
 import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.simulation.ElevatorSim;
@@ -31,22 +35,25 @@ import edu.wpi.first.wpilibj.util.Color8Bit;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import edu.wpi.first.wpilibj2.command.button.Trigger;
+import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
+import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
 import frc.robot.Robot;
 import frc.robot.constants.Superstructure.CANIds;
 import frc.robot.constants.Superstructure.Configs;
 import frc.robot.constants.Superstructure.ElevatorConstants;
 import frc.robot.constants.Superstructure.Mechanisms;
 import frc.robot.constants.Superstructure.PhysicalRobotConstants;
-import frc.robot.constants.Superstructure.Setpoints;
 import frc.robot.util.Tracer;
 
 @Logged
 public class Elevator extends SubsystemBase {
   public enum ElevatorState {
+    Min(0),
     Level1(0.1),
     Level2(0.3),
-    Level3(0.5),
-    Level4(0.9),
+    Level3(1.2),
+    Level4(1.35),
     SourcePickup(0.2),
     Handoff(0);
 
@@ -81,7 +88,7 @@ public class Elevator extends SubsystemBase {
       CANIds.kElevatorMotorFollowerCanId,
       MotorType.kBrushless);
 
-  private double elevatorCurrentTarget = Setpoints.kZero;
+  private ElevatorState elevatorCurrentTarget = ElevatorState.Min;
   private Notifier simNotifier = null;
 
   private DCMotor elevatorMotorModel = DCMotor.getNEO(2);
@@ -97,8 +104,37 @@ public class Elevator extends SubsystemBase {
       0,
       0.0,
       0.0);
+  private final MutVoltage m_appliedVoltage = Volts.mutable(0);
+  // Mutable holder for unit-safe linear distance values, persisted to avoid
+  // reallocation.
+  private final MutDistance m_distance = Meters.mutable(0);
+  private final MutAngle m_rotations = Rotations.mutable(0);
+  // Mutable holder for unit-safe linear velocity values, persisted to avoid
+  // reallocation.
+  private final MutLinearVelocity m_velocity = MetersPerSecond.mutable(0);
 
-  // Mechanism2d setup for subsystem
+  final SysIdRoutine sysIdRoutine = new SysIdRoutine(
+      new SysIdRoutine.Config(Volts.per(Second).of(0.5), Volts.of(4), Seconds.of(5)),
+      new SysIdRoutine.Mechanism(
+          (voltage) -> elevatorMotor.setVoltage(voltage),
+
+          log -> {
+            // Record a frame for the shooter motor.
+            log.motor("elevator")
+                .voltage(
+                    m_appliedVoltage.mut_replace(
+                        elevatorMotor.getAppliedOutput() * RobotController.getBatteryVoltage(), Volts))
+                .linearPosition(m_distance.mut_replace(getLinearPositionMeters(),
+                    Meters)) // Records Height in Meters via SysIdRoutineLog.linearPosition
+                .linearVelocity(m_velocity.mut_replace(getVelocityMetersPerSecond(),
+                    MetersPerSecond)); // Records velocity in MetersPerSecond via SysIdRoutineLog.linearVelocity
+          },
+          this));
+
+  public final Trigger atMin = new Trigger(() -> getLinearPosition().isNear(Meters.of(0),
+      Inches.of(5)));
+  public final Trigger atMax = new Trigger(() -> getLinearPosition().isNear(Meters.of(0.668),
+      Inches.of(3)));
 
   public Elevator() {
     /*
@@ -133,6 +169,8 @@ public class Elevator extends SubsystemBase {
       });
       simNotifier.startPeriodic(0.005);
     }
+    m_elevatorPIDController.setTolerance(0.2);
+
   }
 
   public void updateSimState() {
@@ -148,28 +186,21 @@ public class Elevator extends SubsystemBase {
             60.0,
         RobotController.getBatteryVoltage(),
         0.005);
+
   }
 
   private void moveToSetpoint() {
+    if (false) return;
     elevatorMotor.setVoltage(
         m_elevatorPIDController.calculate(
             convertRotationsToDistance(
                 Rotations.of(elevatorEncoder.getPosition())).in(Meters),
-            elevatorCurrentTarget) +
+            elevatorCurrentTarget.height) +
             m_ElevatorFeedforward.calculate(
                 m_elevatorPIDController.getSetpoint().velocity));
   }
 
-  public Command incrementSetpointCommand(double setpoint) {
-    return this.runOnce(() -> {
-      if (Robot.isReal()) {
-        return;
-      }
-      this.elevatorCurrentTarget += setpoint;
-    });
-  }
-
-  public Command setSetpointCommand(double setpoint) {
+  public Command setSetpointCommand(ElevatorState setpoint) {
     return Commands.sequence(
         this.runOnce(() -> {
           this.elevatorCurrentTarget = setpoint;
@@ -223,7 +254,7 @@ public class Elevator extends SubsystemBase {
             stage1Height + carriageHeight + 0.425256096,
             new Rotation3d(
                 0,
-                Units.degreesToRadians(Mechanisms.m_armMech2d.getAngle() - 39.5),
+                Units.degreesToRadians(Mechanisms.m_wristMech2d.getAngle() - 39.5),
                 0)),
     };
     return poses;
@@ -231,6 +262,19 @@ public class Elevator extends SubsystemBase {
 
   public double getActualPosition() {
     return elevatorMotor.getEncoder().getPosition();
+  }
+
+  public Distance getLinearPosition() {
+    return convertRotationsToDistance(Rotations.of(elevatorMotor.getEncoder().getPosition()));
+  }
+
+  public double getLinearPositionMeters() {
+    return getLinearPosition().in(Meters);
+  }
+  public double getVelocityMetersPerSecond()
+  {
+    return ((elevatorEncoder.getVelocity() / 60)/ PhysicalRobotConstants.kElevatorGearing) *
+           (2 * Math.PI * PhysicalRobotConstants.kElevatorDrumRadius);
   }
 
   public double getElevatorAppliedOutput() {
@@ -247,4 +291,13 @@ public class Elevator extends SubsystemBase {
     return convertRotationsToDistance(
         Rotations.of(elevatorEncoder.getVelocity())).per(Minute);
   }
+
+  public Command runSysIdRoutine() {
+    return (sysIdRoutine.dynamic(Direction.kForward).until(atMax))
+        .andThen(sysIdRoutine.dynamic(Direction.kReverse).until(atMin))
+        .andThen(sysIdRoutine.quasistatic(Direction.kForward).until(atMax))
+        .andThen(sysIdRoutine.quasistatic(Direction.kReverse).until(atMin))
+        .andThen(Commands.print("DONE"));
+  }
+
 }

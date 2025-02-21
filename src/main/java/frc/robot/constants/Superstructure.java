@@ -9,6 +9,7 @@ import static edu.wpi.first.units.Units.*;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.config.SparkMaxConfig;
 import edu.wpi.first.math.util.Units;
+import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.units.measure.Mass;
 import edu.wpi.first.wpilibj.smartdashboard.Mechanism2d;
@@ -22,67 +23,72 @@ public class Superstructure {
     public static final int kElevatorMotorCanId = 9;
     public static final int kElevatorMotorFollowerCanId = 10;
 
-    public static final int kArmMotorCanId = 11;
+    public static final int kWristMotorCanId = 11;
   }
 
   public static final class Configs {
 
-    public static final SparkMaxConfig armConfig = new SparkMaxConfig();
+    public static final SparkMaxConfig WristConfig = new SparkMaxConfig();
     public static final SparkMaxConfig elevatorConfig = new SparkMaxConfig();
     public static final SparkMaxConfig elevatorFollowerConfig = new SparkMaxConfig();
 
     static {
-      // Configure basic settings of the arm motor
-      armConfig
+      // Configure basic settings of the Wrist motor
+      WristConfig
           .idleMode(IdleMode.kBrake)
           .smartCurrentLimit(40)
           .voltageCompensation(12);
-
-      elevatorConfig.idleMode(IdleMode.kBrake).smartCurrentLimit(60); // .voltageCompensation(12);
-      elevatorFollowerConfig.follow(CANIds.kElevatorMotorCanId);
+      WristConfig.absoluteEncoder.inverted(true).zeroCentered(false);
+      //elevatorConfig.encoder.positionConversionFactor(0.048676).velocityConversionFactor(0.048676);
+      elevatorConfig.idleMode(IdleMode.kBrake).inverted(true).smartCurrentLimit(60); // .voltageCompensation(12);
+      elevatorFollowerConfig.smartCurrentLimit(60).follow(CANIds.kElevatorMotorCanId, true);
     }
   }
 
   public static final class ElevatorConstants {
 
-    public static final double kElevatorkG = 0.762;
-    public static final double kElevatorkS = 0;
-    public static final double kElevatorkV = 0.762;
-    public static final double kElevatorkA = 0.11;
+    public static final double kElevatorkG = 0.648582;
+    public static final double kElevatorkS = 0.86503;
+    public static final double kElevatorkV = 1.8592;
+    public static final double kElevatorkA = 0.43583;
 
-    public static final double kElevatorkP = 5;
+    public static final double kElevatorkP = 4.1755;
     public static final double kElevatorkI = 0;
-    public static final double kElevatorkD = 0.23;
+    public static final double kElevatorkD = 0.3;
 
     public static final double kElevatorMaxVelocity = Meters.of(4)
         .per(Second)
         .in(MetersPerSecond);
-    public static final double kElevatorMaxAcceleration = Meters.of(8)
+    public static final double kElevatorMaxAcceleration = Meters.of(4)
         .per(Second)
         .per(Second)
         .in(MetersPerSecondPerSecond);
   }
 
-  public static final class ArmConstants {
+  public static final class WristConstants {
 
-    public static final double kArmkG = 0.762;
-    public static final double kArmkS = 0;
-    public static final double kArmkV = 0.762;
-    public static final double kArmkA = 0.11;
+    public static final double kWristkG = 0.10494;
+    public static final double kWristkS = 0.53848;
+    public static final double kWristkV = 0.9385;
+    public static final double kWristkA = 1.3246;
 
-    public static final double kArmkP = 2.0691;
-    public static final double kArmkI = 0;
-    public static final double kArmkD = 0.0;
+    public static final double kWristkP = 5.8034;
+    public static final double kWristkI = 0;
+    public static final double kWristkD = 0.2;
 
-    public static final double kArmMaxVelocityRPM = 15;
-    public static final double kArmMaxAccelerationRPMperSecond = 30;
+    public static final double kWristMaxVelocityRPM = 15;
+    public static final double kWristMaxAccelerationRPMperSecond = 30;
+    public static final Angle kMinAngle = Degrees.of(0);
+    public static final Angle kMaxAngle = Degrees.of(110);
+
   }
 
   public static final class PhysicalRobotConstants {
 
-    public static final double kElevatorGearing = 3.75; // 5:1 + 24:18
+    public static final double kElevatorGearing = 5;
     public static final double kCarriageMass = 6.80388555;
-    public static final double kElevatorDrumRadius = Units.inchesToMeters(2.5) / 2.0; // m
+    public static final double kElevatorDrumRadius = (Units.inchesToMeters(2.808000) + Units.inchesToMeters(0.125) * 2)
+        / 2.0; // m
     public static final double kMinElevatorCarriageHeightMeters = 0.2286; // m
     public static final double kMinElevatorStage1HeightMeters = 0.9652; // m
     public static final double kMaxElevatorCarriageHeightMeters = 0.9144; // m
@@ -92,23 +98,18 @@ public class Superstructure {
     public static final double kStage1TravelHeightMeters = kMaxElevatorStage1HeightMeters
         - kMinElevatorStage1HeightMeters;
 
-    public static final Distance kArmLength = Meters.of(0.45076397);
-    public static final Mass kArmMass = Pounds.of(7.5258052);
-    public static final double kArmReduction = 32; // TODO: double check
+    public static final Distance kWristLength = Meters.of(0.45076397);
+    public static final Mass kWristMass = Pounds.of(7.5258052);
+    public static final double kWristReduction = 32; // TODO: double check
     public static final double kMinAngleRads = -8 * Math.PI;
     public static final double kMaxAngleRads = 8 * Math.PI;
-  }
-
-  public static final class Setpoints {
-
-    public static final double kZero = 0;
   }
 
   public static final class Mechanisms {
 
     public static final Mechanism2d m_mech2d = new Mechanism2d(10, 10);
     public static final MechanismRoot2d m_mech2dRoot = m_mech2d.getRoot(
-        "ElevatorArm Root",
+        "ElevatorWrist Root",
         25,
         0);
     public static final MechanismLigament2d m_elevatorStage1Mech2d = m_mech2dRoot.append(
@@ -118,14 +119,14 @@ public class Superstructure {
             90));
     public static final MechanismLigament2d m_elevatorCarriageMech2d = m_elevatorStage1Mech2d.append(
         new MechanismLigament2d(
-            "Elevator 6Carriage",
+            "Elevator Carriage",
             PhysicalRobotConstants.kMinElevatorCarriageHeightMeters,
             0));
 
-    public static final MechanismLigament2d m_armMech2d = m_elevatorCarriageMech2d.append(
+    public static final MechanismLigament2d m_wristMech2d = m_elevatorCarriageMech2d.append(
         new MechanismLigament2d(
-            "Arm",
-            PhysicalRobotConstants.kArmLength.in(Meters),
+            "Wrist",
+            PhysicalRobotConstants.kWristLength.in(Meters),
             180 -
                 Units.radiansToDegrees(PhysicalRobotConstants.kMinAngleRads) -
                 180));
