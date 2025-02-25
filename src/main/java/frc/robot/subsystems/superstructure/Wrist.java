@@ -45,8 +45,8 @@ import frc.robot.util.Tracer;
 @Logged
 public class Wrist extends SubsystemBase {
   public enum WristState {
-    LevelNormal(35),
-    Level4(45),
+    LevelNormal(40),
+    Level4(55),
     Handoff(0),
     Safe(45);
 
@@ -152,6 +152,7 @@ public class Wrist extends SubsystemBase {
       });
       simNotifier.startPeriodic(0.005);
     }
+    m_wristPIDController.enableContinuousInput(0,1 );
   }
 
   public void updateSimState() {

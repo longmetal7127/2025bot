@@ -50,9 +50,9 @@ import frc.robot.util.Tracer;
 public class Elevator extends SubsystemBase {
   public enum ElevatorState {
     Min(0),
-    Level1(0.1),
-    Level2(0.3),
-    Level3(1.2),
+    Level1(0),
+    Level2(0.25),
+    Level3(0.68),
     Level4(1.35),
     SourcePickup(0.2),
     Handoff(0);
@@ -73,11 +73,17 @@ public class Elevator extends SubsystemBase {
           ElevatorConstants.kElevatorMaxVelocity,
           ElevatorConstants.kElevatorMaxAcceleration));
 
-  private final ElevatorFeedforward m_ElevatorFeedforward = new ElevatorFeedforward(
+  private final ElevatorFeedforward m_ElevatorFeedforwardStage1 = new ElevatorFeedforward(
       ElevatorConstants.kElevatorkS,
-      ElevatorConstants.kElevatorkG,
+      ElevatorConstants.kElevatorkGStage1,
       ElevatorConstants.kElevatorkV,
       ElevatorConstants.kElevatorkA);
+      private final ElevatorFeedforward m_ElevatorFeedforwardStage2 = new ElevatorFeedforward(
+        ElevatorConstants.kElevatorkS+.1,
+        ElevatorConstants.kElevatorkGStage2,
+        ElevatorConstants.kElevatorkV,
+        ElevatorConstants.kElevatorkA);
+  
 
   private SparkMax elevatorMotor = new SparkMax(
       CANIds.kElevatorMotorCanId,
@@ -114,7 +120,7 @@ public class Elevator extends SubsystemBase {
   private final MutLinearVelocity m_velocity = MetersPerSecond.mutable(0);
 
   final SysIdRoutine sysIdRoutine = new SysIdRoutine(
-      new SysIdRoutine.Config(Volts.per(Second).of(0.5), Volts.of(4), Seconds.of(5)),
+      new SysIdRoutine.Config(Volts.per(Second).of(0.5), Volts.of(6), Seconds.of(10)),
       new SysIdRoutine.Mechanism(
           (voltage) -> elevatorMotor.setVoltage(voltage),
 
@@ -169,8 +175,6 @@ public class Elevator extends SubsystemBase {
       });
       simNotifier.startPeriodic(0.005);
     }
-    m_elevatorPIDController.setTolerance(0.2);
-
   }
 
   public void updateSimState() {
@@ -191,12 +195,13 @@ public class Elevator extends SubsystemBase {
 
   private void moveToSetpoint() {
     if (false) return;
+    var feedforward = getLinearPositionMeters() >= 0.70 ? m_ElevatorFeedforwardStage2 : m_ElevatorFeedforwardStage1;
     elevatorMotor.setVoltage(
         m_elevatorPIDController.calculate(
             convertRotationsToDistance(
                 Rotations.of(elevatorEncoder.getPosition())).in(Meters),
             elevatorCurrentTarget.height) +
-            m_ElevatorFeedforward.calculate(
+            feedforward.calculate(
                 m_elevatorPIDController.getSetpoint().velocity));
   }
 
@@ -298,6 +303,9 @@ public class Elevator extends SubsystemBase {
         .andThen(sysIdRoutine.quasistatic(Direction.kForward).until(atMax))
         .andThen(sysIdRoutine.quasistatic(Direction.kReverse).until(atMin))
         .andThen(Commands.print("DONE"));
+  }
+  public Distance getSetpoint() {
+    return Meters.of(elevatorCurrentTarget.height);
   }
 
 }

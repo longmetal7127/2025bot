@@ -26,6 +26,7 @@ import frc.robot.constants.Constants.OperatorConstants;
 import frc.robot.subsystems.DriveTrain;
 import frc.robot.subsystems.superstructure.Wrist;
 import frc.robot.subsystems.superstructure.Elevator.ElevatorState;
+import frc.robot.subsystems.superstructure.Take;
 import frc.robot.subsystems.superstructure.Wrist.WristState;
 import frc.robot.subsystems.superstructure.Elevator;
 import frc.robot.util.Tracer;
@@ -47,6 +48,7 @@ public class Robot extends TimedRobot {
   private DriveTrain driveTrain = new DriveTrain();
   private Elevator elevator = new Elevator();
   private Wrist Wrist = new Wrist();
+  private Take take = new Take();
 
   private AutoFactory autoFactory;
   private final AutoChooser autoChooser;
@@ -124,7 +126,7 @@ public class Robot extends TimedRobot {
                 Wrist.setSetpointCommand(WristState.Safe),
                 Commands.waitUntil(Wrist.atAngle(WristState.Safe.angle, 4)),
 
-                elevator.setSetpointCommand(ElevatorState.Min)));
+                elevator.setSetpointCommand(ElevatorState.Min) /* elevator.runSysIdRoutine() */));
     joystick
         .button(4)
         .onTrue(
@@ -132,8 +134,13 @@ public class Robot extends TimedRobot {
                 Wrist.setSetpointCommand(WristState.Safe),
                 Commands.waitUntil(Wrist.atAngle(WristState.Safe.angle, 4)),
 
-                elevator.setSetpointCommand(ElevatorState.Level4)));
-    //joystick.button(6).onTrue(Wrist.runSysIdRoutine());
+                elevator.setSetpointCommand(ElevatorState.Level4),
+                Wrist.setSetpointCommand(WristState.Level4)));
+
+    joystick.button(6).whileTrue(take.runTakeMotor());
+    joystick.button(7).whileTrue(take.runTakeMotorReverse());
+
+    // joystick.button(6).onTrue(Wrist.runSysIdRoutine());
   }
 
   /**

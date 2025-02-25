@@ -24,6 +24,8 @@ public class Superstructure {
     public static final int kElevatorMotorFollowerCanId = 10;
 
     public static final int kWristMotorCanId = 11;
+    public static final int kTakeMotorCanId = 12;
+
   }
 
   public static final class Configs {
@@ -39,27 +41,28 @@ public class Superstructure {
           .smartCurrentLimit(40)
           .voltageCompensation(12);
       WristConfig.absoluteEncoder.inverted(true).zeroCentered(false);
-      //elevatorConfig.encoder.positionConversionFactor(0.048676).velocityConversionFactor(0.048676);
+      // elevatorConfig.encoder.positionConversionFactor(0.048676).velocityConversionFactor(0.048676);
       elevatorConfig.idleMode(IdleMode.kBrake).inverted(true).smartCurrentLimit(60); // .voltageCompensation(12);
       elevatorFollowerConfig.smartCurrentLimit(60).follow(CANIds.kElevatorMotorCanId, true);
     }
   }
 
   public static final class ElevatorConstants {
+    public static final double kElevatorkGStage1 = 0.78141;
+    public static final double kElevatorkGStage2 = 0.9465;
 
-    public static final double kElevatorkG = 0.648582;
-    public static final double kElevatorkS = 0.86503;
-    public static final double kElevatorkV = 1.8592;
-    public static final double kElevatorkA = 0.43583;
+    public static final double kElevatorkS = 1.018;
+    public static final double kElevatorkV = 2.0572;
+    public static final double kElevatorkA = 0.4875;
 
-    public static final double kElevatorkP = 4.1755;
+    public static final double kElevatorkP = 33.899;
     public static final double kElevatorkI = 0;
-    public static final double kElevatorkD = 0.3;
+    public static final double kElevatorkD = 3.6315;
 
     public static final double kElevatorMaxVelocity = Meters.of(4)
         .per(Second)
         .in(MetersPerSecond);
-    public static final double kElevatorMaxAcceleration = Meters.of(4)
+    public static final double kElevatorMaxAcceleration = Meters.of(3)
         .per(Second)
         .per(Second)
         .in(MetersPerSecondPerSecond);
