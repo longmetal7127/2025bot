@@ -81,7 +81,7 @@ public class Take extends SubsystemBase {
 
     public Command runTakeMotorReverse() {
         return startEnd(() -> {
-            setpoint =  1200;
+            setpoint = -1200;
         }, () -> {
             setpoint = 0;
         });

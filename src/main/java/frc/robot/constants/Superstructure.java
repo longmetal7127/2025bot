@@ -47,7 +47,7 @@ public class Superstructure {
       elevatorConfig.idleMode(IdleMode.kBrake).inverted(true).smartCurrentLimit(60); // .voltageCompensation(12);
       elevatorFollowerConfig.smartCurrentLimit(60).follow(CANIds.kElevatorMotorCanId, true);
       takeConfig.idleMode(IdleMode.kBrake);
-      takeConfig.limitSwitch.forwardLimitSwitchType(LimitSwitchConfig.Type.kNormallyOpen);
+      takeConfig.limitSwitch.forwardLimitSwitchType(LimitSwitchConfig.Type.kNormallyOpen).forwardLimitSwitchEnabled(false);
       takeConfig.closedLoop.pidf(5, 0,0, 1.1);
       takeConfig.signals.primaryEncoderVelocityAlwaysOn(true).primaryEncoderPositionAlwaysOn(true);
     }

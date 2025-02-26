@@ -131,7 +131,7 @@ public class Robot extends TimedRobot {
                 Wrist.wristToPosition(WristState.Level4)));
 
     joystick.povDown().or(joystick.povDownLeft()).or(joystick.povDownRight()).onTrue(intake());
-    joystick.trigger().whileTrue(take.runTakeMotorReverse());
+    joystick.trigger().whileTrue(take.runTakeMotor());
 
     // joystick.button(6).onTrue(Wrist.runSysIdRoutine());
   }
@@ -257,7 +257,7 @@ public class Robot extends TimedRobot {
         elevator.elevatorToPosition(ElevatorState.Handoff),
         Wrist.wristToPosition(WristState.Handoff),
         take.runTakeMotor().until(take.hasCoral),
-        take.runTakeMotorReverse(400).until(take.hasCoral.negate())
+        take.runTakeMotorReverse(600).until(take.hasCoral.negate())
 
     );
   }
