@@ -53,8 +53,8 @@ public class Robot extends TimedRobot {
   public Wrist Wrist = new Wrist();
   private Take take = new Take();
 
-  SlewRateLimiter accelfilterx = new SlewRateLimiter(10e10);
-  SlewRateLimiter accelfiltery = new SlewRateLimiter(10e10);
+  private SlewRateLimiter accelfilterx = new SlewRateLimiter(10e10);
+  private SlewRateLimiter accelfiltery = new SlewRateLimiter(10e10);
 
   private AutoFactory autoFactory;
   private final AutoChooser autoChooser;
@@ -100,21 +100,21 @@ public class Robot extends TimedRobot {
                   ? OperatorConstants.kLogitechDeadband
                   : OperatorConstants.kDriveDeadband;
 
-              double elevcentermax = ElevatorState.Level4.height; //inches
+              double elevcentermax = ElevatorState.Level4.height; // inches
               double elevcentermin = ElevatorState.Min.height;
-          
+
               double elevheight = elevator.getLinearPositionMeters();
-          
+
               double rateconst = 0.25;
-              double ratioofcenter = (elevheight-elevcentermin)/(elevcentermax-elevcentermin);
-              double rate = ratioofcenter*rateconst;
-              
+              double ratioofcenter = (elevheight - elevcentermin) / (elevcentermax - elevcentermin);
+              double rate = ratioofcenter * rateconst;
+
               accelfilterx.reset(rate);
               accelfiltery.reset(rate);
 
-              //accel limiting
-              x = accelfilterx.calculate(x);
-              y = accelfiltery.calculate(y);
+              // accel limiting
+              // x = accelfilterx.calculate(x);
+              // y = accelfiltery.calculate(y);
 
               driveTrain.drive(
                   MathUtil.applyDeadband(y * -multiplier, deadband),
@@ -129,18 +129,21 @@ public class Robot extends TimedRobot {
   public void configureBindings() {
 
     joystick
-        .button(3)
-        .onTrue(
-            Commands.sequence(
-                Wrist.wristToPosition(WristState.Safe),
-                elevator.elevatorToPosition(ElevatorState.Level3)));
-    joystick
         .button(2)
         .onTrue(
             Commands.sequence(
                 Wrist.wristToPosition(WristState.Safe),
 
-                elevator.elevatorToPosition(ElevatorState.Min) /* elevator.runSysIdRoutine() */));
+                elevator.elevatorToPosition(ElevatorState.Level2),
+                Wrist.wristToPosition(WristState.LevelNormal)));
+    joystick
+        .button(3)
+        .onTrue(
+            Commands.sequence(
+                Wrist.wristToPosition(WristState.Safe),
+                elevator.elevatorToPosition(ElevatorState.Level3),
+                Wrist.wristToPosition(WristState.LevelNormal)));
+
     joystick
         .button(4)
         .onTrue(
@@ -276,7 +279,7 @@ public class Robot extends TimedRobot {
         elevator.elevatorToPosition(ElevatorState.Handoff),
         Wrist.wristToPosition(WristState.Handoff),
         take.runTakeMotor().until(take.hasCoral),
-        take.runTakeMotorReverse(600).until(take.hasCoral.negate())
+        take.runTakeMotorReverse(-390).until(take.hasCoral.negate())
 
     );
   }
