@@ -11,6 +11,7 @@ import choreo.auto.AutoTrajectory;
 import edu.wpi.first.epilogue.Epilogue;
 import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.wpilibj.TimedRobot;
@@ -46,12 +47,14 @@ import org.littletonrobotics.urcl.URCL;
  */
 @Logged
 public class Robot extends TimedRobot {
-
   private Command m_autonomousCommand;
   private DriveTrain driveTrain = new DriveTrain();
   public Elevator elevator = new Elevator();
   public Wrist Wrist = new Wrist();
   private Take take = new Take();
+
+  SlewRateLimiter accelfilterx = new SlewRateLimiter(10e10);
+  SlewRateLimiter accelfiltery = new SlewRateLimiter(10e10);
 
   private AutoFactory autoFactory;
   private final AutoChooser autoChooser;
@@ -96,6 +99,22 @@ public class Robot extends TimedRobot {
               double deadband = OperatorConstants.kLogitech
                   ? OperatorConstants.kLogitechDeadband
                   : OperatorConstants.kDriveDeadband;
+
+              double elevcentermax = ElevatorState.Level4.height; //inches
+              double elevcentermin = ElevatorState.Min.height;
+          
+              double elevheight = elevator.getLinearPositionMeters();
+          
+              double rateconst = 0.25;
+              double ratioofcenter = (elevheight-elevcentermin)/(elevcentermax-elevcentermin);
+              double rate = ratioofcenter*rateconst;
+              
+              accelfilterx.reset(rate);
+              accelfiltery.reset(rate);
+
+              //accel limiting
+              x = accelfilterx.calculate(x);
+              y = accelfiltery.calculate(y);
 
               driveTrain.drive(
                   MathUtil.applyDeadband(y * -multiplier, deadband),
