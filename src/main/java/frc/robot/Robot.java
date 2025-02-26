@@ -30,6 +30,9 @@ import frc.robot.subsystems.superstructure.Take;
 import frc.robot.subsystems.superstructure.Wrist.WristState;
 import frc.robot.subsystems.superstructure.Elevator;
 import frc.robot.util.Tracer;
+
+import java.util.Map;
+
 import org.littletonrobotics.urcl.URCL;
 
 /**
@@ -46,8 +49,8 @@ public class Robot extends TimedRobot {
 
   private Command m_autonomousCommand;
   private DriveTrain driveTrain = new DriveTrain();
-  private Elevator elevator = new Elevator();
-  private Wrist Wrist = new Wrist();
+  public Elevator elevator = new Elevator();
+  public Wrist Wrist = new Wrist();
   private Take take = new Take();
 
   private AutoFactory autoFactory;
@@ -105,40 +108,30 @@ public class Robot extends TimedRobot {
   }
 
   public void configureBindings() {
-    joystick
-        .trigger()
-        .onTrue(
-            Commands.runOnce(() -> {
-              driveTrain.zeroHeading();
-            }));
+
     joystick
         .button(3)
         .onTrue(
             Commands.sequence(
-                Wrist.setSetpointCommand(WristState.Safe),
-                Commands.waitUntil(Wrist.atAngle(WristState.Safe.angle, 4)),
-
-                elevator.setSetpointCommand(ElevatorState.Level3)));
+                Wrist.wristToPosition(WristState.Safe),
+                elevator.elevatorToPosition(ElevatorState.Level3)));
     joystick
         .button(2)
         .onTrue(
             Commands.sequence(
-                Wrist.setSetpointCommand(WristState.Safe),
-                Commands.waitUntil(Wrist.atAngle(WristState.Safe.angle, 4)),
+                Wrist.wristToPosition(WristState.Safe),
 
-                elevator.setSetpointCommand(ElevatorState.Min) /* elevator.runSysIdRoutine() */));
+                elevator.elevatorToPosition(ElevatorState.Min) /* elevator.runSysIdRoutine() */));
     joystick
         .button(4)
         .onTrue(
             Commands.sequence(
-                Wrist.setSetpointCommand(WristState.Safe),
-                Commands.waitUntil(Wrist.atAngle(WristState.Safe.angle, 4)),
+                Wrist.wristToPosition(WristState.Safe),
+                elevator.elevatorToPosition(ElevatorState.Level4),
+                Wrist.wristToPosition(WristState.Level4)));
 
-                elevator.setSetpointCommand(ElevatorState.Level4),
-                Wrist.setSetpointCommand(WristState.Level4)));
-
-    joystick.button(6).whileTrue(take.runTakeMotor());
-    joystick.button(7).whileTrue(take.runTakeMotorReverse());
+    joystick.povDown().or(joystick.povDownLeft()).or(joystick.povDownRight()).onTrue(intake());
+    joystick.trigger().whileTrue(take.runTakeMotorReverse());
 
     // joystick.button(6).onTrue(Wrist.runSysIdRoutine());
   }
@@ -257,8 +250,15 @@ public class Robot extends TimedRobot {
     return routine;
   }
 
-  public Command goSomewhere() {
-    return Commands.run(() -> {
-    });
+  public Command intake() {
+    return Commands.sequence(
+        Wrist.wristToPosition(WristState.Safe)
+            .unless(Wrist.atSetpoint(WristState.Handoff).and(elevator.atSetpoint(ElevatorState.Handoff))),
+        elevator.elevatorToPosition(ElevatorState.Handoff),
+        Wrist.wristToPosition(WristState.Handoff),
+        take.runTakeMotor().until(take.hasCoral),
+        take.runTakeMotorReverse(400).until(take.hasCoral.negate())
+
+    );
   }
 }

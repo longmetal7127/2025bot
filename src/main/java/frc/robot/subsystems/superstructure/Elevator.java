@@ -13,6 +13,7 @@ import com.revrobotics.spark.SparkBase.ResetMode;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.SparkMax;
 import edu.wpi.first.epilogue.Logged;
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.ElevatorFeedforward;
 import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.geometry.Pose3d;
@@ -44,6 +45,7 @@ import frc.robot.constants.Superstructure.Configs;
 import frc.robot.constants.Superstructure.ElevatorConstants;
 import frc.robot.constants.Superstructure.Mechanisms;
 import frc.robot.constants.Superstructure.PhysicalRobotConstants;
+import frc.robot.subsystems.superstructure.Elevator.ElevatorState;
 import frc.robot.util.Tracer;
 
 @Logged
@@ -78,12 +80,11 @@ public class Elevator extends SubsystemBase {
       ElevatorConstants.kElevatorkGStage1,
       ElevatorConstants.kElevatorkV,
       ElevatorConstants.kElevatorkA);
-      private final ElevatorFeedforward m_ElevatorFeedforwardStage2 = new ElevatorFeedforward(
-        ElevatorConstants.kElevatorkS+.1,
-        ElevatorConstants.kElevatorkGStage2,
-        ElevatorConstants.kElevatorkV,
-        ElevatorConstants.kElevatorkA);
-  
+  private final ElevatorFeedforward m_ElevatorFeedforwardStage2 = new ElevatorFeedforward(
+      ElevatorConstants.kElevatorkS + .1,
+      ElevatorConstants.kElevatorkGStage2,
+      ElevatorConstants.kElevatorkV,
+      ElevatorConstants.kElevatorkA);
 
   private SparkMax elevatorMotor = new SparkMax(
       CANIds.kElevatorMotorCanId,
@@ -194,17 +195,26 @@ public class Elevator extends SubsystemBase {
   }
 
   private void moveToSetpoint() {
-    if (false) return;
+    if (false)
+      return;
     var feedforward = getLinearPositionMeters() >= 0.70 ? m_ElevatorFeedforwardStage2 : m_ElevatorFeedforwardStage1;
-    elevatorMotor.setVoltage(
-        m_elevatorPIDController.calculate(
-            convertRotationsToDistance(
-                Rotations.of(elevatorEncoder.getPosition())).in(Meters),
-            elevatorCurrentTarget.height) +
-            feedforward.calculate(
-                m_elevatorPIDController.getSetpoint().velocity));
+    
+      elevatorMotor.setVoltage(
+      m_elevatorPIDController.calculate(
+      convertRotationsToDistance(
+      Rotations.of(elevatorEncoder.getPosition())).in(Meters),
+      elevatorCurrentTarget.height) +
+      feedforward.calculate(
+      m_elevatorPIDController.getSetpoint().velocity));
+     
   }
-
+  /**
+   * Do not use unless you understand that it exits immediately, NOT 
+   * after it reaches setpoint
+   * @param setpoint
+   * @return
+   * @deprecated
+   */
   public Command setSetpointCommand(ElevatorState setpoint) {
     return Commands.sequence(
         this.runOnce(() -> {
@@ -276,10 +286,10 @@ public class Elevator extends SubsystemBase {
   public double getLinearPositionMeters() {
     return getLinearPosition().in(Meters);
   }
-  public double getVelocityMetersPerSecond()
-  {
-    return ((elevatorEncoder.getVelocity() / 60)/ PhysicalRobotConstants.kElevatorGearing) *
-           (2 * Math.PI * PhysicalRobotConstants.kElevatorDrumRadius);
+
+  public double getVelocityMetersPerSecond() {
+    return ((elevatorEncoder.getVelocity() / 60) / PhysicalRobotConstants.kElevatorGearing) *
+        (2 * Math.PI * PhysicalRobotConstants.kElevatorDrumRadius);
   }
 
   public double getElevatorAppliedOutput() {
@@ -304,8 +314,30 @@ public class Elevator extends SubsystemBase {
         .andThen(sysIdRoutine.quasistatic(Direction.kReverse).until(atMin))
         .andThen(Commands.print("DONE"));
   }
+
   public Distance getSetpoint() {
     return Meters.of(elevatorCurrentTarget.height);
+  }
+
+  public Trigger atHeight(double height) {
+    return new Trigger(() -> {
+      return MathUtil.isNear(height,
+          (getLinearPositionMeters()), 0.02);
+    });
+  }
+
+  public Command elevatorToPosition(ElevatorState state) {
+    return Commands.sequence(setSetpointCommand(state), Commands.waitUntil(atSetpoint));
+  }
+
+  public Trigger atSetpoint = new Trigger(() -> {
+    return MathUtil.isNear(getLinearPositionMeters(), elevatorCurrentTarget.height, 0.02);
+  });
+
+  public Trigger atSetpoint(ElevatorState setpoint) {
+    return new Trigger(() -> {
+      return MathUtil.isNear(getLinearPositionMeters(), setpoint.height, 0.02);
+    });
   }
 
 }

@@ -7,6 +7,7 @@ package frc.robot.constants;
 import static edu.wpi.first.units.Units.*;
 
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
+import com.revrobotics.spark.config.LimitSwitchConfig;
 import com.revrobotics.spark.config.SparkMaxConfig;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.units.measure.Angle;
@@ -33,6 +34,7 @@ public class Superstructure {
     public static final SparkMaxConfig WristConfig = new SparkMaxConfig();
     public static final SparkMaxConfig elevatorConfig = new SparkMaxConfig();
     public static final SparkMaxConfig elevatorFollowerConfig = new SparkMaxConfig();
+    public static final SparkMaxConfig takeConfig = new SparkMaxConfig();
 
     static {
       // Configure basic settings of the Wrist motor
@@ -44,6 +46,10 @@ public class Superstructure {
       // elevatorConfig.encoder.positionConversionFactor(0.048676).velocityConversionFactor(0.048676);
       elevatorConfig.idleMode(IdleMode.kBrake).inverted(true).smartCurrentLimit(60); // .voltageCompensation(12);
       elevatorFollowerConfig.smartCurrentLimit(60).follow(CANIds.kElevatorMotorCanId, true);
+      takeConfig.idleMode(IdleMode.kBrake);
+      takeConfig.limitSwitch.forwardLimitSwitchType(LimitSwitchConfig.Type.kNormallyOpen);
+      takeConfig.closedLoop.pidf(5, 0,0, 1.1);
+      takeConfig.signals.primaryEncoderVelocityAlwaysOn(true).primaryEncoderPositionAlwaysOn(true);
     }
   }
 
@@ -75,7 +81,7 @@ public class Superstructure {
     public static final double kWristkV = 0.9385;
     public static final double kWristkA = 1.3246;
 
-    public static final double kWristkP = 5.8034;
+    public static final double kWristkP = 8.8034;
     public static final double kWristkI = 0;
     public static final double kWristkD = 0.2;
 

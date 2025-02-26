@@ -36,6 +36,7 @@ import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
 import frc.robot.Robot;
 import frc.robot.constants.Superstructure.WristConstants;
+import frc.robot.subsystems.superstructure.Wrist.WristState;
 import frc.robot.constants.Superstructure.CANIds;
 import frc.robot.constants.Superstructure.Configs;
 import frc.robot.constants.Superstructure.Mechanisms;
@@ -121,7 +122,7 @@ public class Wrist extends SubsystemBase {
                 .voltage(
                     m_appliedVoltage.mut_replace(wristMotor.getAppliedOutput() *
                         RobotController.getBatteryVoltage(), Volts))
-                .angularPosition(m_angle.mut_replace(wristAbsoluteEncoder.getPosition(), Rotations))
+                .angularPosition(m_angle.mut_replace(getArmActualPosition(), Rotations))
                 .angularVelocity(m_velocity.mut_replace(wristAbsoluteEncoder.getVelocity(), RPM));
           },
           this));
@@ -152,7 +153,7 @@ public class Wrist extends SubsystemBase {
       });
       simNotifier.startPeriodic(0.005);
     }
-    m_wristPIDController.enableContinuousInput(0,1 );
+    m_wristPIDController.enableContinuousInput(0, 1);
   }
 
   public void updateSimState() {
@@ -172,14 +173,20 @@ public class Wrist extends SubsystemBase {
     if (false)
       return;
     double pidOutput = m_wristPIDController.calculate(
-        wristAbsoluteEncoder.getPosition(),
+      getArmActualPosition(),
         Units.degreesToRotations(wristCurrentTarget.angle));
     State setpointState = m_wristPIDController.getSetpoint();
     wristMotor.setVoltage(
         pidOutput +
             m_wristFeedforward.calculate(setpointState.position, setpointState.velocity));
   }
-
+  /**
+   * Do not use unless you understand that it exits immediately, NOT 
+   * after it reaches setpoint
+   * @param setpoint
+   * @return
+   * @deprecated
+   */
   public Command setSetpointCommand(WristState wristSetpoint) {
     return this.runOnce(() -> {
       this.wristCurrentTarget = wristSetpoint;
@@ -195,7 +202,7 @@ public class Wrist extends SubsystemBase {
         180 -
             (Units.radiansToDegrees(PhysicalRobotConstants.kMinAngleRads) +
                 Units.rotationsToDegrees(
-                    wristAbsoluteEncoder.getPosition()))
+                  getArmActualPosition()))
             -
             90);
     Tracer.endTrace();
@@ -211,7 +218,8 @@ public class Wrist extends SubsystemBase {
   }
 
   public double getArmActualPosition() {
-    return wristAbsoluteEncoder.getPosition();
+    var realPos =  wristAbsoluteEncoder.getPosition();
+    return realPos > 0.99 ? 0 : realPos;
   }
 
   public Trigger atAngle(double angle, double tolerance) {
@@ -220,6 +228,18 @@ public class Wrist extends SubsystemBase {
           Units.rotationsToDegrees(getArmActualPosition()), tolerance);
     });
   }
+
+  public Trigger atSetpoint = new Trigger(() -> {
+    return MathUtil.isNear(wristCurrentTarget.angle,
+        Units.rotationsToDegrees(getArmActualPosition()), 6);
+  });
+
+  public Trigger atSetpoint(WristState setpoint) {
+    return new Trigger(() -> {
+      return MathUtil.isNear(setpoint.angle,
+          Units.rotationsToDegrees(getArmActualPosition()), 6);
+    });
+  };
 
   public Angle getAngle() {
     return Rotations.of(getArmActualPosition());
@@ -235,6 +255,10 @@ public class Wrist extends SubsystemBase {
         .andThen(m_sysIdRoutine.quasistatic(Direction.kForward).until(atMax))
         .andThen(Commands.waitSeconds(1))
         .andThen(m_sysIdRoutine.quasistatic(Direction.kReverse).until(atMin)).andThen(Commands.print("done"));
+  }
+
+  public Command wristToPosition(WristState state) {
+    return Commands.sequence(setSetpointCommand(state), Commands.waitUntil(atSetpoint));
   }
 
 }
