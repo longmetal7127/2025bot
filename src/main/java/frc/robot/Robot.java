@@ -15,6 +15,7 @@ import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.wpilibj.TimedRobot;
+import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
@@ -141,8 +142,6 @@ public class Robot extends TimedRobot {
   }
 
   public void configureBindings() {
-    joystick.button(5).onTrue(driveTrain.zeroHeading());
-
     joystick
         .button(2)
         .onTrue(
@@ -166,7 +165,26 @@ public class Robot extends TimedRobot {
                 Wrist.wristToPosition(WristState.Safe),
                 elevator.elevatorToPosition(ElevatorState.Level4),
                 Wrist.wristToPosition(WristState.Level4)));
+    
+    joystick.button(5).onTrue(driveTrain.zeroHeading());
+                /*
+    //from bottom left edge
+    double reefx = 4.489337;//13.058912 for red
+    double reefy = 4.025923;
 
+    double xpos = driveTrain.getPose().getX();
+    double ypos = driveTrain.getPose().getY();
+
+    //double xcorrection = 0;
+    //double ycorrection = 0;
+    joystick
+        .button(6)
+        .onTrue(
+          Commands.sequence(
+            Wrist.wristToPosition(WristState.Level4)));
+              
+        );
+         */
     joystick.povDown().or(joystick.povDownLeft()).or(joystick.povDownRight()).onTrue(intake());
     joystick.trigger().whileTrue(take.runTakeMotor());
 

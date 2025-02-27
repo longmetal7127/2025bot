@@ -12,7 +12,7 @@
         },
         {
             "axis": "z",
-            "degrees": 0
+            "degrees": 180
         }
     ],
     "position": [
@@ -34,7 +34,7 @@
                 },
                 {
                     "axis": "z",
-                    "degrees": 0
+                    "degrees": 180
                 }
             ],
             "zeroedPosition": [
@@ -55,7 +55,7 @@
                 },
                 {
                     "axis": "z",
-                    "degrees": 0
+                    "degrees": 180
                 }
             ],
             "zeroedPosition": [
@@ -72,17 +72,17 @@
                 },
                 {
                     "axis": "y",
-                    "degrees": 0
+                    "degrees": 90
                 },
                 {
                     "axis": "z",
-                    "degrees": 0
+                    "degrees": 180
                 }
             ],
             "zeroedPosition": [
-                0.292420802,
-                0,
-                -0.425256096
+                0.7965,
+		0,
+		0.15875
             ]
         }
 
