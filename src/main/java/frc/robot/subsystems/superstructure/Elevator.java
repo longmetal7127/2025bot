@@ -315,8 +315,12 @@ public class Elevator extends SubsystemBase {
         .andThen(Commands.print("DONE"));
   }
 
-  public Distance getSetpoint() {
+  public Distance getSetpointMeters() {
     return Meters.of(elevatorCurrentTarget.height);
+  }
+
+  public double getSetpointPose() {
+    return elevatorCurrentTarget.height;
   }
 
   public Trigger atHeight(double height) {

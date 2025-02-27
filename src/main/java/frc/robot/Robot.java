@@ -53,8 +53,22 @@ public class Robot extends TimedRobot {
   public Wrist Wrist = new Wrist();
   private Take take = new Take();
 
-  private SlewRateLimiter accelfilterx = new SlewRateLimiter(10e10);
-  private SlewRateLimiter accelfiltery = new SlewRateLimiter(10e10);
+  private double rateBase = 1000;
+  private double rateL2 = 1.5;
+  private double rateL3 = .25;
+  private double rateL4 = .125;
+
+  private SlewRateLimiter accelfilterxBase = new SlewRateLimiter(rateBase);
+  private SlewRateLimiter accelfilteryBase = new SlewRateLimiter(rateBase);
+
+  private SlewRateLimiter accelfilterxL2 = new SlewRateLimiter(rateL2);
+  private SlewRateLimiter accelfilteryL2 = new SlewRateLimiter(rateL2);
+
+  private SlewRateLimiter accelfilterxL3 = new SlewRateLimiter(rateL3);
+  private SlewRateLimiter accelfilteryL3 = new SlewRateLimiter(rateL3);
+
+  private SlewRateLimiter accelfilterxL4 = new SlewRateLimiter(rateL4);
+  private SlewRateLimiter accelfilteryL4 = new SlewRateLimiter(rateL4);
 
   private AutoFactory autoFactory;
   private final AutoChooser autoChooser;
@@ -99,22 +113,22 @@ public class Robot extends TimedRobot {
               double deadband = OperatorConstants.kLogitech
                   ? OperatorConstants.kLogitechDeadband
                   : OperatorConstants.kDriveDeadband;
-
-              double elevcentermax = ElevatorState.Level4.height; // inches
-              double elevcentermin = ElevatorState.Min.height;
-
-              double elevheight = elevator.getLinearPositionMeters();
-
-              double rateconst = 0.25;
-              double ratioofcenter = (elevheight - elevcentermin) / (elevcentermax - elevcentermin);
-              double rate = ratioofcenter * rateconst;
-
-              accelfilterx.reset(rate);
-              accelfiltery.reset(rate);
-
-              // accel limiting
-              // x = accelfilterx.calculate(x);
-              // y = accelfiltery.calculate(y);
+              
+              if(MathUtil.isNear(elevator.getSetpointPose(), ElevatorState.Handoff.height, 0.02)) {
+                x = accelfilterxBase.calculate(x);
+                y = accelfilteryBase.calculate(y);
+              } else if(MathUtil.isNear(elevator.getSetpointPose(), ElevatorState.Level2.height, 0.02)) {
+                x = accelfilterxL2.calculate(x);
+                y = accelfilteryL2.calculate(y);
+              } else if(MathUtil.isNear(elevator.getSetpointPose(), ElevatorState.Level3.height, 0.02)) {
+                x = accelfilterxL3.calculate(x);
+                y = accelfilteryL3.calculate(y);
+              } else if(MathUtil.isNear(elevator.getSetpointPose(), ElevatorState.Level4.height, 0.02)) {
+                x = accelfilterxL4.calculate(x);
+                y = accelfilteryL4.calculate(y);
+              }
+              
+              //System.out.println(x);
 
               driveTrain.drive(
                   MathUtil.applyDeadband(y * -multiplier, deadband),
@@ -127,6 +141,7 @@ public class Robot extends TimedRobot {
   }
 
   public void configureBindings() {
+    joystick.button(5).onTrue(driveTrain.zeroHeading());
 
     joystick
         .button(2)
