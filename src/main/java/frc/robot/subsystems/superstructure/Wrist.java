@@ -8,6 +8,7 @@ import static edu.wpi.first.units.Units.*;
 
 import com.revrobotics.AbsoluteEncoder;
 import com.revrobotics.RelativeEncoder;
+import com.revrobotics.sim.SparkAbsoluteEncoderSim;
 import com.revrobotics.sim.SparkMaxSim;
 import com.revrobotics.spark.SparkBase.PersistMode;
 import com.revrobotics.spark.SparkBase.ResetMode;
@@ -85,6 +86,7 @@ public class Wrist extends SubsystemBase {
 
   private DCMotor wristMotorModel = DCMotor.getNEO(1);
   private SparkMaxSim wristMotorSim;
+  private SparkAbsoluteEncoderSim absoluteEncoderSim;
   private final SingleJointedArmSim m_wristSim = new SingleJointedArmSim(
       wristMotorModel,
       PhysicalRobotConstants.kWristReduction,
@@ -143,16 +145,19 @@ public class Wrist extends SubsystemBase {
         ResetMode.kResetSafeParameters,
         PersistMode.kPersistParameters);
 
-    wristEncoder.setPosition(0);
 
     // Initialize simulation values
     wristMotorSim = new SparkMaxSim(wristMotor, wristMotorModel);
+    absoluteEncoderSim = new SparkAbsoluteEncoderSim(wristMotor);
     if (Robot.isSimulation()) {
       simNotifier = new Notifier(() -> {
         updateSimState();
       });
       simNotifier.startPeriodic(0.005);
+      absoluteEncoderSim.setPosition(0);
     }
+    wristEncoder.setPosition(wristAbsoluteEncoder.getPosition());
+
     m_wristPIDController.enableContinuousInput(0, 1);
   }
 
@@ -167,6 +172,9 @@ public class Wrist extends SubsystemBase {
             m_wristSim.getVelocityRadPerSec()),
         RobotController.getBatteryVoltage(),
         0.005);
+        absoluteEncoderSim.iterate(Units.radiansPerSecondToRotationsPerMinute(
+          m_wristSim.getVelocityRadPerSec()), 0.005);
+
   }
 
   private void moveToSetpoint() {
