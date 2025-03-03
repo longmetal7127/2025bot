@@ -121,7 +121,7 @@ public class Elevator extends SubsystemBase {
   private final MutLinearVelocity m_velocity = MetersPerSecond.mutable(0);
 
   final SysIdRoutine sysIdRoutine = new SysIdRoutine(
-      new SysIdRoutine.Config(Volts.per(Second).of(0.5), Volts.of(6), Seconds.of(10)),
+      new SysIdRoutine.Config(Volts.per(Second).of(0.5), Volts.of(4.5), Seconds.of(10)),
       new SysIdRoutine.Mechanism(
           (voltage) -> elevatorMotor.setVoltage(voltage),
 
@@ -195,22 +195,21 @@ public class Elevator extends SubsystemBase {
   }
 
   private void moveToSetpoint() {
-    if (false)
-      return;
-    var feedforward = getLinearPositionMeters() >= 0.70 ? m_ElevatorFeedforwardStage2 : m_ElevatorFeedforwardStage1;
-    
-      elevatorMotor.setVoltage(
-      m_elevatorPIDController.calculate(
-      convertRotationsToDistance(
-      Rotations.of(elevatorEncoder.getPosition())).in(Meters),
-      elevatorCurrentTarget.height) +
-      feedforward.calculate(
-      m_elevatorPIDController.getSetpoint().velocity));
-     
+    var feedforward = convertRotationsToMeters(elevatorEncoder.getPosition()) >= 0.70 ? m_ElevatorFeedforwardStage2 : m_ElevatorFeedforwardStage1;
+
+    elevatorMotor.setVoltage(
+        m_elevatorPIDController.calculate(
+          convertRotationsToMeters(elevatorEncoder.getPosition()),
+            elevatorCurrentTarget.height) +
+            feedforward.calculate(
+                m_elevatorPIDController.getSetpoint().velocity));
+
   }
+
   /**
-   * Do not use unless you understand that it exits immediately, NOT 
+   * Do not use unless you understand that it exits immediately, NOT
    * after it reaches setpoint
+   * 
    * @param setpoint
    * @return
    * @deprecated
@@ -226,7 +225,7 @@ public class Elevator extends SubsystemBase {
   public void periodic() {
     Tracer.startTrace("ElevatorPeriodic");
     moveToSetpoint();
-    double height = (elevatorEncoder.getPosition() /
+    /*double height = (elevatorEncoder.getPosition() /
         PhysicalRobotConstants.kElevatorGearing) *
         (PhysicalRobotConstants.kElevatorDrumRadius * 2.0 * Math.PI);
     double carriageHeight = Math.min(
@@ -238,7 +237,7 @@ public class Elevator extends SubsystemBase {
     Mechanisms.m_elevatorCarriageMech2d.setLength(
         PhysicalRobotConstants.kMinElevatorCarriageHeightMeters + carriageHeight);
     Mechanisms.m_elevatorStage1Mech2d.setLength(
-        PhysicalRobotConstants.kMinElevatorStage1HeightMeters + stage1Height);
+        PhysicalRobotConstants.kMinElevatorStage1HeightMeters + stage1Height);*/
 
     Tracer.endTrace();
   }
@@ -300,6 +299,11 @@ public class Elevator extends SubsystemBase {
     return Meters.of(
         (rotations.in(Rotations) / PhysicalRobotConstants.kElevatorGearing) *
             (PhysicalRobotConstants.kElevatorDrumRadius * 2 * Math.PI));
+  }
+  public static double convertRotationsToMeters(double rotations) {
+    return (rotations /
+        PhysicalRobotConstants.kElevatorGearing) *
+        (PhysicalRobotConstants.kElevatorDrumRadius * 2.0 * Math.PI);
   }
 
   public LinearVelocity getVelocity() {

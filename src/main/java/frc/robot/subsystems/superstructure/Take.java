@@ -27,6 +27,7 @@ import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
 import frc.robot.constants.Superstructure;
 import frc.robot.constants.Superstructure.Configs;
+import frc.robot.util.Tracer;
 
 @Logged
 public class Take extends SubsystemBase {
@@ -97,8 +98,10 @@ public class Take extends SubsystemBase {
 
 
     public void periodic() {
+        Tracer.startTrace("TakePeriodic");
         takeMotor.setVoltage(controller.calculate(takeMotor.getEncoder().getVelocity(), setpoint) +
                 feedforward.calculate(setpoint));
+        Tracer.endTrace();
 
     }
 

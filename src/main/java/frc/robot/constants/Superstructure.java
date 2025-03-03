@@ -57,13 +57,13 @@ public class Superstructure {
     public static final double kElevatorkGStage1 = 0.78141;
     public static final double kElevatorkGStage2 = 0.9465;
 
-    public static final double kElevatorkS = 1.018;
-    public static final double kElevatorkV = 2.0572;
-    public static final double kElevatorkA = 0.4875;
+    public static final double kElevatorkS = 0.8672;
+    public static final double kElevatorkV = 1.5766;
+    public static final double kElevatorkA = 0.42745;
 
     public static final double kElevatorkP = 33.899;
     public static final double kElevatorkI = 0;
-    public static final double kElevatorkD = 3.6315;
+    public static final double kElevatorkD = 3.9366;
 
     public static final double kElevatorMaxVelocity = Meters.of(4)
         .per(Second)
@@ -76,17 +76,17 @@ public class Superstructure {
 
   public static final class WristConstants {
 
-    public static final double kWristkG = 0.10494;
-    public static final double kWristkS = 0.53848;
-    public static final double kWristkV = 0.9385;
-    public static final double kWristkA = 1.3246;
+    public static final double kWristkG = 0.39721;
+    public static final double kWristkS = 0.45126;
+    public static final double kWristkV = 1.0745;
+    public static final double kWristkA = 0.61657;
 
-    public static final double kWristkP = 8.8034;
+    public static final double kWristkP = 19.6;
     public static final double kWristkI = 0;
-    public static final double kWristkD = 0.2;
+    public static final double kWristkD = 0.4;
 
     public static final double kWristMaxVelocityRPM = 15;
-    public static final double kWristMaxAccelerationRPMperSecond = 30;
+    public static final double kWristMaxAccelerationRPMperSecond = 10;
     public static final Angle kMinAngle = Degrees.of(0);
     public static final Angle kMaxAngle = Degrees.of(110);
 

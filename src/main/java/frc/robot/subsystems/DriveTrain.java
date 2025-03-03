@@ -26,6 +26,7 @@ import frc.robot.Robot;
 import frc.robot.constants.Swerve;
 import frc.robot.constants.Swerve.CANIds;
 import frc.robot.constants.Swerve.DriveConstants;
+import frc.robot.util.Tracer;
 
 @Logged
 public class DriveTrain extends SubsystemBase {
@@ -102,6 +103,7 @@ public class DriveTrain extends SubsystemBase {
 
   @Override
   public void periodic() {
+    Tracer.startTrace("DriveTrain");
     // sim case
     if (Robot.isSimulation()) {
       double dt = 0.02;
@@ -154,6 +156,7 @@ public class DriveTrain extends SubsystemBase {
         }
       );
     }
+    Tracer.endTrace();
   }
 
   /**

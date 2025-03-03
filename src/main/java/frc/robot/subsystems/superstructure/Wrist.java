@@ -77,7 +77,7 @@ public class Wrist extends SubsystemBase {
       WristConstants.kWristkS,
       WristConstants.kWristkG,
       WristConstants.kWristkV,
-      WristConstants.kWristkV);
+      WristConstants.kWristkA);
 
   private RelativeEncoder wristEncoder = wristMotor.getEncoder();
   private AbsoluteEncoder wristAbsoluteEncoder = wristMotor.getAbsoluteEncoder();
@@ -186,7 +186,7 @@ public class Wrist extends SubsystemBase {
     State setpointState = m_wristPIDController.getSetpoint();
     wristMotor.setVoltage(
         pidOutput +
-            m_wristFeedforward.calculate(setpointState.position, setpointState.velocity));
+            m_wristFeedforward.calculate(setpointState.position + 0.36111111, setpointState.velocity));
   }
   /**
    * Do not use unless you understand that it exits immediately, NOT 
@@ -204,7 +204,7 @@ public class Wrist extends SubsystemBase {
   @Override
   public void periodic() {
     Tracer.startTrace("Wrist Periodic");
-    moveToSetpoint();
+    Tracer.traceFunc("Wrist moveToSetpoint", this::moveToSetpoint);
 
     Mechanisms.m_wristMech2d.setAngle(
         180 -

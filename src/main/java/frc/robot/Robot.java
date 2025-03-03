@@ -55,8 +55,8 @@ public class Robot extends TimedRobot {
 
   private double rateBase = 1000;
   private double rateL2 = 1.5;
-  private double rateL3 = .25;
-  private double rateL4 = .125;
+  private double rateL3 = .35;
+  private double rateL4 = .225;
 
   private SlewRateLimiter accelfilterxBase = new SlewRateLimiter(rateBase);
   private SlewRateLimiter accelfilteryBase = new SlewRateLimiter(rateBase);
@@ -113,22 +113,21 @@ public class Robot extends TimedRobot {
               double deadband = OperatorConstants.kLogitech
                   ? OperatorConstants.kLogitechDeadband
                   : OperatorConstants.kDriveDeadband;
-              
-              if(MathUtil.isNear(elevator.getSetpointPose(), ElevatorState.Handoff.height, 0.02)) {
-                x = accelfilterxBase.calculate(x);
-                y = accelfilteryBase.calculate(y);
-              } else if(MathUtil.isNear(elevator.getSetpointPose(), ElevatorState.Level2.height, 0.02)) {
+
+              if (MathUtil.isNear(elevator.getSetpointPose(), ElevatorState.Handoff.height, 0.02)) {
+                //x = accelfilterxBase.calculate(x);
+                //y = accelfilteryBase.calculate(y);
+              } else if (MathUtil.isNear(elevator.getSetpointPose(), ElevatorState.Level2.height, 0.02)) {
                 x = accelfilterxL2.calculate(x);
                 y = accelfilteryL2.calculate(y);
-              } else if(MathUtil.isNear(elevator.getSetpointPose(), ElevatorState.Level3.height, 0.02)) {
+              } else if (MathUtil.isNear(elevator.getSetpointPose(), ElevatorState.Level3.height, 0.02)) {
                 x = accelfilterxL3.calculate(x);
                 y = accelfilteryL3.calculate(y);
-              } else if(MathUtil.isNear(elevator.getSetpointPose(), ElevatorState.Level4.height, 0.02)) {
+              } else if (MathUtil.isNear(elevator.getSetpointPose(), ElevatorState.Level4.height, 0.02)) {
                 x = accelfilterxL4.calculate(x);
                 y = accelfilteryL4.calculate(y);
               }
-              
-              //System.out.println(x);
+
 
               driveTrain.drive(
                   MathUtil.applyDeadband(y * -multiplier, deadband),
@@ -138,6 +137,10 @@ public class Robot extends TimedRobot {
             },
             driveTrain));
     Epilogue.bind(this);
+  }
+
+  public void configureBindingsSysid() {
+    joystick.trigger().onTrue(Wrist.runSysIdRoutine());
   }
 
   public void configureBindings() {
