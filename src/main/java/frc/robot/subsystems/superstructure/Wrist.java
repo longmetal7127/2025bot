@@ -145,7 +145,6 @@ public class Wrist extends SubsystemBase {
         ResetMode.kResetSafeParameters,
         PersistMode.kPersistParameters);
 
-
     // Initialize simulation values
     wristMotorSim = new SparkMaxSim(wristMotor, wristMotorModel);
     absoluteEncoderSim = new SparkAbsoluteEncoderSim(wristMotor);
@@ -172,8 +171,8 @@ public class Wrist extends SubsystemBase {
             m_wristSim.getVelocityRadPerSec()),
         RobotController.getBatteryVoltage(),
         0.005);
-        absoluteEncoderSim.iterate(Units.radiansPerSecondToRotationsPerMinute(
-          m_wristSim.getVelocityRadPerSec()), 0.005);
+    absoluteEncoderSim.iterate(Units.radiansPerSecondToRotationsPerMinute(
+        m_wristSim.getVelocityRadPerSec()), 0.005);
 
   }
 
@@ -181,16 +180,18 @@ public class Wrist extends SubsystemBase {
     if (false)
       return;
     double pidOutput = m_wristPIDController.calculate(
-      getArmActualPosition(),
+        getArmActualPosition(),
         Units.degreesToRotations(wristCurrentTarget.angle));
     State setpointState = m_wristPIDController.getSetpoint();
     wristMotor.setVoltage(
         pidOutput +
             m_wristFeedforward.calculate(setpointState.position + 0.36111111, setpointState.velocity));
   }
+
   /**
-   * Do not use unless you understand that it exits immediately, NOT 
+   * Do not use unless you understand that it exits immediately, NOT
    * after it reaches setpoint
+   * 
    * @param setpoint
    * @return
    * @deprecated
@@ -210,7 +211,7 @@ public class Wrist extends SubsystemBase {
         180 -
             (Units.radiansToDegrees(PhysicalRobotConstants.kMinAngleRads) +
                 Units.rotationsToDegrees(
-                  getArmActualPosition()))
+                    getArmActualPosition()))
             -
             90);
     Tracer.endTrace();
@@ -226,7 +227,7 @@ public class Wrist extends SubsystemBase {
   }
 
   public double getArmActualPosition() {
-    var realPos =  wristAbsoluteEncoder.getPosition();
+    var realPos = wristAbsoluteEncoder.getPosition();
     return realPos > 0.99 ? 0 : realPos;
   }
 

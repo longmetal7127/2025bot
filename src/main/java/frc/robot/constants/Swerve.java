@@ -81,6 +81,8 @@ public class Swerve {
     public static final double kDriveWheelFreeSpeedRps =
       (kDrivingMotorFreeSpeedRps * kWheelCircumferenceMeters) /
       kDrivingMotorReduction;
+
+    public static final double kTurningMotorReduction = 46.42;
   }
 
   public static final class MotorConstants {
@@ -95,7 +97,7 @@ public class Swerve {
 
     static {
       // Use module constants to calculate conversion factors and feed forward gain.
-      double drivingFactor =
+       double drivingFactor =
         (ModuleConstants.kWheelDiameterMeters * Math.PI) /
         ModuleConstants.kDrivingMotorReduction;
       double turningFactor = 2 * Math.PI;

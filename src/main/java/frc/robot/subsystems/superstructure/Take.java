@@ -14,6 +14,7 @@ import com.revrobotics.spark.SparkMax;
 import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
+import edu.wpi.first.math.filter.LinearFilter;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.units.measure.MutAngle;
 import edu.wpi.first.units.measure.MutAngularVelocity;
@@ -33,6 +34,12 @@ import frc.robot.util.Tracer;
 public class Take extends SubsystemBase {
     private SparkMax takeMotor = new SparkMax(Superstructure.CANIds.kTakeMotorCanId, MotorType.kBrushless);
     public Trigger hasCoral = new Trigger(takeMotor.getForwardLimitSwitch()::isPressed);
+    private LinearFilter coralFilter = LinearFilter.highPass(0.1, 0.02);
+    private LinearFilter movingAvg = LinearFilter.movingAverage(5);
+    public Trigger justGotCoral = new Trigger(() -> {
+        return coralFilter.calculate((takeMotor.getOutputCurrent())) > 1;
+    }).debounce(0.04);
+
     SysIdRoutine sysIdRoutine;
     private double setpoint = 0;
     private SimpleMotorFeedforward feedforward = new SimpleMotorFeedforward(0.2015, 0.0020986, 0);
@@ -87,15 +94,14 @@ public class Take extends SubsystemBase {
             setpoint = 0;
         });
     }
+
     public Command runTakeMotorReverse(double speed) {
         return startEnd(() -> {
-            setpoint =  speed;
+            setpoint = speed;
         }, () -> {
             setpoint = 0;
         });
     }
-
-
 
     public void periodic() {
         Tracer.startTrace("TakePeriodic");

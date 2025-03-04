@@ -44,7 +44,7 @@ public class Superstructure {
           .voltageCompensation(12);
       WristConfig.absoluteEncoder.inverted(true).zeroCentered(false);
       // elevatorConfig.encoder.positionConversionFactor(0.048676).velocityConversionFactor(0.048676);
-      elevatorConfig.idleMode(IdleMode.kBrake).inverted(true).smartCurrentLimit(60); // .voltageCompensation(12);
+      elevatorConfig.idleMode(IdleMode.kBrake).inverted(true).smartCurrentLimit(60).voltageCompensation(12);
       elevatorFollowerConfig.smartCurrentLimit(60).follow(CANIds.kElevatorMotorCanId, true);
       takeConfig.idleMode(IdleMode.kBrake);
       takeConfig.limitSwitch.forwardLimitSwitchType(LimitSwitchConfig.Type.kNormallyOpen).forwardLimitSwitchEnabled(false);

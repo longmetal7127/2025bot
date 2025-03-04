@@ -115,8 +115,8 @@ public class Robot extends TimedRobot {
                   : OperatorConstants.kDriveDeadband;
 
               if (MathUtil.isNear(elevator.getSetpointPose(), ElevatorState.Handoff.height, 0.02)) {
-                //x = accelfilterxBase.calculate(x);
-                //y = accelfilteryBase.calculate(y);
+                // x = accelfilterxBase.calculate(x);
+                // y = accelfilteryBase.calculate(y);
               } else if (MathUtil.isNear(elevator.getSetpointPose(), ElevatorState.Level2.height, 0.02)) {
                 x = accelfilterxL2.calculate(x);
                 y = accelfilteryL2.calculate(y);
@@ -127,7 +127,6 @@ public class Robot extends TimedRobot {
                 x = accelfilterxL4.calculate(x);
                 y = accelfilteryL4.calculate(y);
               }
-
 
               driveTrain.drive(
                   MathUtil.applyDeadband(y * -multiplier, deadband),
@@ -296,7 +295,9 @@ public class Robot extends TimedRobot {
             .unless(Wrist.atSetpoint(WristState.Handoff).and(elevator.atSetpoint(ElevatorState.Handoff))),
         elevator.elevatorToPosition(ElevatorState.Handoff),
         Wrist.wristToPosition(WristState.Handoff),
-        take.runTakeMotor().until(take.hasCoral),
+        take.runTakeMotorReverse(2400).until(take.justGotCoral.or(take.hasCoral)),
+        take.runTakeMotorReverse(500).until(take.hasCoral),
+
         take.runTakeMotorReverse(-390).until(take.hasCoral.negate())
 
     );
