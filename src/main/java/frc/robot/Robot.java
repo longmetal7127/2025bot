@@ -54,9 +54,9 @@ public class Robot extends TimedRobot {
   private Take take = new Take();
 
   private double rateBase = 1000;
-  private double rateL2 = 1.5;
-  private double rateL3 = .35;
-  private double rateL4 = .225;
+  private double rateL2 = 1000;
+  private double rateL3 = 1000;
+  private double rateL4 = 1;
 
   private SlewRateLimiter accelfilterxBase = new SlewRateLimiter(rateBase);
   private SlewRateLimiter accelfilteryBase = new SlewRateLimiter(rateBase);
@@ -118,11 +118,11 @@ public class Robot extends TimedRobot {
                 // x = accelfilterxBase.calculate(x);
                 // y = accelfilteryBase.calculate(y);
               } else if (MathUtil.isNear(elevator.getSetpointPose(), ElevatorState.Level2.height, 0.02)) {
-                x = accelfilterxL2.calculate(x);
-                y = accelfilteryL2.calculate(y);
+                //x = accelfilterxL2.calculate(x);
+                //y = accelfilteryL2.calculate(y);
               } else if (MathUtil.isNear(elevator.getSetpointPose(), ElevatorState.Level3.height, 0.02)) {
-                x = accelfilterxL3.calculate(x);
-                y = accelfilteryL3.calculate(y);
+                //x = accelfilterxL3.calculate(x);
+                //y = accelfilteryL3.calculate(y);
               } else if (MathUtil.isNear(elevator.getSetpointPose(), ElevatorState.Level4.height, 0.02)) {
                 x = accelfilterxL4.calculate(x);
                 y = accelfilteryL4.calculate(y);

@@ -63,7 +63,7 @@ public class Superstructure {
 
     public static final double kElevatorkP = 33.899;
     public static final double kElevatorkI = 0;
-    public static final double kElevatorkD = 3.9366;
+    public static final double kElevatorkD = 2.6;
 
     public static final double kElevatorMaxVelocity = Meters.of(4)
         .per(Second)
@@ -81,7 +81,7 @@ public class Superstructure {
     public static final double kWristkV = 1.0745;
     public static final double kWristkA = 0.61657;
 
-    public static final double kWristkP = 19.6;
+    public static final double kWristkP = 21;
     public static final double kWristkI = 0;
     public static final double kWristkD = 0.4;
 
