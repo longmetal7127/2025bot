@@ -14,17 +14,22 @@ import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.wpilibj.DataLogManager;
+import edu.wpi.first.wpilibj.PowerDistribution;
+import edu.wpi.first.wpilibj.PowerDistribution.ModuleType;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.RunCommand;
+import edu.wpi.first.wpilibj2.command.Command.InterruptionBehavior;
 import edu.wpi.first.wpilibj2.command.button.CommandJoystick;
 import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
 import frc.robot.constants.Constants;
 import frc.robot.constants.Constants.OperatorConstants;
+import frc.robot.constants.Swerve.DriveSetpoints;
 import frc.robot.subsystems.DriveTrain;
+import frc.robot.subsystems.LED;
 import frc.robot.subsystems.superstructure.Wrist;
 import frc.robot.subsystems.superstructure.Elevator.ElevatorState;
 import frc.robot.subsystems.superstructure.Take;
@@ -32,7 +37,10 @@ import frc.robot.subsystems.superstructure.Wrist.WristState;
 import frc.robot.subsystems.superstructure.Elevator;
 import frc.robot.util.Tracer;
 
-import java.util.Map;
+import dev.doglog.DogLog;
+import dev.doglog.DogLogOptions;
+
+import java.util.Optional;
 
 import org.littletonrobotics.urcl.URCL;
 
@@ -52,6 +60,8 @@ public class Robot extends TimedRobot {
   public Elevator elevator = new Elevator();
   public Wrist Wrist = new Wrist();
   private Take take = new Take();
+  private LED led = new LED();
+
 
   private double rateBase = 1000;
   private double rateL2 = 1000;
@@ -75,6 +85,7 @@ public class Robot extends TimedRobot {
   public static CommandJoystick joystick = new CommandJoystick(
       Constants.OperatorConstants.kDriverJoystickPort);
   private final CommandScheduler scheduler = CommandScheduler.getInstance();
+  PowerDistribution pdh = new PowerDistribution(20, ModuleType.kRev);
 
   /**
    * This function is run when the robot is first started up and should be used
@@ -84,6 +95,10 @@ public class Robot extends TimedRobot {
   public Robot() {
     DataLogManager.start();
     URCL.start();
+    DogLog.setOptions(new DogLogOptions().withCaptureDs(true));
+    DogLog.setPdh(pdh);
+
+
     autoFactory = new AutoFactory(
         driveTrain::getPose,
         driveTrain::resetOdometry,
@@ -97,44 +112,7 @@ public class Robot extends TimedRobot {
     SmartDashboard.putData("hiii", autoChooser);
     RobotModeTriggers.autonomous().whileTrue(autoChooser.selectedCommandScheduler());
 
-    driveTrain.setDefaultCommand(
-        new RunCommand(
-            () -> {
-              double multiplier = (((joystick.getThrottle() * -1) + 1) / 2); // turbo mode
-              double z = joystick.getZ();
-              double x = joystick.getX();
-              double y = joystick.getY();
-
-              // limiting x/y on input methods
-              x = Math.sin(Math.atan2(x, y)) *
-                  Math.min(Math.max(Math.abs(y), Math.abs(x)), 1);
-              y = Math.cos(Math.atan2(x, y)) *
-                  Math.min(Math.max(Math.abs(y), Math.abs(x)), 1);
-              double deadband = OperatorConstants.kLogitech
-                  ? OperatorConstants.kLogitechDeadband
-                  : OperatorConstants.kDriveDeadband;
-
-              if (MathUtil.isNear(elevator.getSetpointPose(), ElevatorState.Handoff.height, 0.02)) {
-                // x = accelfilterxBase.calculate(x);
-                // y = accelfilteryBase.calculate(y);
-              } else if (MathUtil.isNear(elevator.getSetpointPose(), ElevatorState.Level2.height, 0.02)) {
-                //x = accelfilterxL2.calculate(x);
-                //y = accelfilteryL2.calculate(y);
-              } else if (MathUtil.isNear(elevator.getSetpointPose(), ElevatorState.Level3.height, 0.02)) {
-                //x = accelfilterxL3.calculate(x);
-                //y = accelfilteryL3.calculate(y);
-              } else if (MathUtil.isNear(elevator.getSetpointPose(), ElevatorState.Level4.height, 0.02)) {
-                x = accelfilterxL4.calculate(x);
-                y = accelfilteryL4.calculate(y);
-              }
-
-              driveTrain.drive(
-                  MathUtil.applyDeadband(y * -multiplier, deadband),
-                  MathUtil.applyDeadband(x * -multiplier, deadband),
-                  MathUtil.applyDeadband(z * -1, deadband),
-                  true);
-            },
-            driveTrain));
+    driveTrain.setDefaultCommand(driveTrain.joystickDrive(joystick::getX, joystick::getY, joystick::getZ));
     Epilogue.bind(this);
   }
 
@@ -171,7 +149,7 @@ public class Robot extends TimedRobot {
 
     joystick.povDown().or(joystick.povDownLeft()).or(joystick.povDownRight()).onTrue(intake());
     joystick.trigger().whileTrue(take.runTakeMotor());
-
+    joystick.povUp().onTrue(driveTrain.autoAlign(() -> DriveSetpoints.A, Optional.of(joystick::getX), Optional.of(joystick::getX), Optional.of(joystick::getZ)));
     // joystick.button(6).onTrue(Wrist.runSysIdRoutine());
   }
 
@@ -195,6 +173,7 @@ public class Robot extends TimedRobot {
     // robot's periodic
     // block in order for anything in the Command-based framework to work.
     Tracer.traceFunc("CommandScheduler", scheduler::run);
+
   }
 
   /** This function is called once each time the robot enters Disabled mode. */
@@ -295,8 +274,7 @@ public class Robot extends TimedRobot {
             .unless(Wrist.atSetpoint(WristState.Handoff).and(elevator.atSetpoint(ElevatorState.Handoff))),
         elevator.elevatorToPosition(ElevatorState.Handoff),
         Wrist.wristToPosition(WristState.Handoff),
-        take.runTakeMotorReverse(2400).until(take.justGotCoral.or(take.hasCoral)),
-        take.runTakeMotorReverse(500).until(take.hasCoral),
+        take.runTakeMotorReverse(1200).until(take.hasCoral),
 
         take.runTakeMotorReverse(-390).until(take.hasCoral.negate())
 

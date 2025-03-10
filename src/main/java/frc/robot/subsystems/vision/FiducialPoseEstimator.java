@@ -107,7 +107,7 @@ public class FiducialPoseEstimator {
 
             switch (estimate.tagsUsed().length) {
                 case 0 -> {
-                    System.out.println("AAGH");
+                    //System.out.println("AAGH");
                 } // Do nothing
                 case 1 -> trigEstimate(estimate);
                 default -> solvePnPEstimate(estimate);
@@ -187,7 +187,7 @@ public class FiducialPoseEstimator {
         var tagPoseOptional = tagLayout.getTagPose(tag.id());
         var gyroYaw = gyroYawGetter.get(estimate.timestamp());
         if (tagPoseOptional.isEmpty() || gyroYaw == null) {
-            System.out.println("HUH");
+            //System.out.println("HUH");
             solvePnPEstimate(estimate);
             return;
         }
@@ -223,12 +223,12 @@ public class FiducialPoseEstimator {
 
         // Obviously bad data falls back to SolvePnP
         if (robotPose.getX() < 0 || robotPose.getX() > Constants.FIELD_LENGTH_METERS) {
-            System.out.println("TRIG X");
+            //System.out.println("TRIG X");
             solvePnPEstimate(estimate);
             return;
         }
         if (robotPose.getY() < 0 || robotPose.getY() > Constants.FIELD_WIDTH_METERS) {
-            System.out.println("TRIG y");
+            //System.out.println("TRIG y");
             solvePnPEstimate(estimate);
             return;
         }
@@ -238,7 +238,7 @@ public class FiducialPoseEstimator {
         // Prevents bad data from bad initial conditions from affecting estimates
         var delta = robotPose.minus(currentPoseEstimateSupplier.get());
         if (delta.getTranslation().getNorm() > .025 || delta.getRotation().getDegrees() > 2) {
-            System.out.println("TOO FAR");
+            //System.out.println("TOO FAR");
 
             solvePnPEstimate(estimate);
             return;
@@ -256,28 +256,28 @@ public class FiducialPoseEstimator {
     }
 
     private void solvePnPEstimate(FiducialPoseEstimate estimate) {
-        System.out.println("FALLING BACK TO PNP");
+        //System.out.println("FALLING BACK TO PNP");
         // Filter out obviously bad data
         if (Math.abs(estimate.robotPoseEstimate().getZ()) > .025) {
-            System.out.println("Z" + estimate.robotPoseEstimate().getZ());
+            //System.out.println("Z" + estimate.robotPoseEstimate().getZ());
             return;
 
         }
         if (estimate.robotPoseEstimate().getX() < 0
                 || estimate.robotPoseEstimate().getX() > Constants.FIELD_LENGTH_METERS) {
-                    System.out.println("X");
+                    //System.out.println("X");
 
             return;
         }
         if (estimate.robotPoseEstimate().getY() < 0
                 || estimate.robotPoseEstimate().getY() > Constants.FIELD_WIDTH_METERS) {
-                    System.out.println("Y");
+                    //System.out.println("Y");
 
             return;
         }
         double maxAmbiguity = .2;
         if (estimate.tagsUsed().length == 1 && estimate.tagsUsed()[0].ambiguity() > maxAmbiguity) {
-            System.out.println("Ambiguity");
+            //System.out.println("Ambiguity");
 
             return;
         }
@@ -303,7 +303,7 @@ public class FiducialPoseEstimator {
         var angularDivisor = Math.pow(estimate.tagsUsed().length, 3);
 
         posesUsed.add(estimate.robotPoseEstimate());
-        System.out.println("made it this far");
+        //System.out.println("made it this far");
         estimatesList.add(
                 new PoseEstimate(
                         estimate.robotPoseEstimate().toPose2d(),

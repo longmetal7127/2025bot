@@ -218,6 +218,7 @@ public class Elevator extends SubsystemBase {
     return Commands.sequence(
         this.runOnce(() -> {
           this.elevatorCurrentTarget = setpoint;
+          m_elevatorPIDController.reset(getLinearPositionMeters());
         }));
   }
 

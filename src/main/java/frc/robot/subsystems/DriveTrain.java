@@ -4,13 +4,20 @@
 
 package frc.robot.subsystems;
 
+import java.util.Optional;
+import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 
 import com.studica.frc.AHRS;
+
+import choreo.trajectory.SwerveSample;
+import dev.doglog.DogLog;
 import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.hal.SimDouble;
 import edu.wpi.first.hal.simulation.SimDeviceDataJNI;
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.VecBuilder;
+import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -32,16 +39,24 @@ import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Robot;
+import frc.robot.constants.Constants.OperatorConstants;
 import frc.robot.constants.Swerve;
 import frc.robot.constants.Vision;
+import frc.robot.constants.Swerve.AutoConstants;
 import frc.robot.constants.Swerve.CANIds;
 import frc.robot.constants.Swerve.DriveConstants;
+import frc.robot.constants.Swerve.DriveSetpoints;
+import frc.robot.constants.Swerve.ModuleConstants;
 import frc.robot.constants.Vision.CameraOne;
+import frc.robot.subsystems.superstructure.Elevator.ElevatorState;
 import frc.robot.subsystems.vision.FiducialPoseEstimator;
+import frc.robot.subsystems.vision.SwervePoseEstimator;
 import frc.robot.subsystems.vision.FiducialPoseEstimator.GyroYawGetter;
 import frc.robot.subsystems.vision.FiducialPoseEstimator.PoseEstimate;
+import frc.robot.util.RepulsorFieldPlanner;
 import frc.robot.util.Tracer;
 
 @Logged
@@ -71,6 +86,7 @@ public class DriveTrain extends SubsystemBase {
 
   // sim zero timer
   private double bufferZeroTime = 0.25;
+  public DriveSetpoints setpoint = DriveSetpoints.A;
 
   // The gyro sensor
   public final AHRS m_gyro = new AHRS(AHRS.NavXComType.kMXP_SPI);
@@ -93,18 +109,29 @@ public class DriveTrain extends SubsystemBase {
   // sim field
   private Field2d m_field = new Field2d();
 
-  private SwerveDrivePoseEstimator poseEstimator;
+  private SwervePoseEstimator poseEstimator;
   private GyroYawGetter yawGetter = (
       timestamp) -> DriverStation.isEnabled() ? yawBuffer.getSample(timestamp).orElse(null) : null;
   public final FiducialPoseEstimator[] estimators;
   // Create and configure a drivetrain simulation configuration
+  private RepulsorFieldPlanner repulsorFieldPlanner = new RepulsorFieldPlanner();
+  private final PIDController xController = new PIDController(
+      AutoConstants.kTranslation.kP,
+      AutoConstants.kTranslation.kI,
+      AutoConstants.kTranslation.kD);
+  private final PIDController yController = new PIDController(
+      AutoConstants.kTranslation.kP,
+      AutoConstants.kTranslation.kI,
+      AutoConstants.kTranslation.kD);
+  private final PIDController rController = new PIDController(
+      AutoConstants.kRotation.kP,
+      AutoConstants.kRotation.kI,
+      AutoConstants.kRotation.kD);
 
   /** Creates a new DriveSubsystem. */
   public DriveTrain() {
-    var stateStdDevs = VecBuilder.fill(0.1, 0.1, 0.1);
-    var visionStdDevs = VecBuilder.fill(1, 1, 1);
 
-    poseEstimator = new SwerveDrivePoseEstimator(
+    poseEstimator = new SwervePoseEstimator(
         Swerve.DriveConstants.kDriveKinematics,
         m_gyro.getRotation2d(),
         new SwerveModulePosition[] {
@@ -113,7 +140,7 @@ public class DriveTrain extends SubsystemBase {
             m_rearLeft.getPosition(),
             m_rearRight.getPosition(),
         },
-        new Pose2d(), stateStdDevs, visionStdDevs);
+        new Pose2d());
 
     if (Robot.isSimulation()) {
       // create field on smart dashboard
@@ -135,15 +162,17 @@ public class DriveTrain extends SubsystemBase {
             Units.inchesToMeters(9.375),
             Units.inchesToMeters(21.108355),
             new Rotation3d(0, Units.degreesToRadians(10), 0))),
-        /*new FiducialPoseEstimator(
-
-            "Cam_Right",
-            yawGetter,
-            poseEstimator::getEstimatedPosition, new Transform3d(
-                4.053308,
-                9.375,
-                21.108355,
-                new Rotation3d(0, 10, 0)))*/ };
+        /*
+         * new FiducialPoseEstimator(
+         * 
+         * "Cam_Right",
+         * yawGetter,
+         * poseEstimator::getEstimatedPosition, new Transform3d(
+         * 4.053308,
+         * 9.375,
+         * 21.108355,
+         * new Rotation3d(0, 10, 0)))
+         */ };
 
   }
 
@@ -151,20 +180,20 @@ public class DriveTrain extends SubsystemBase {
   public void periodic() {
     Tracer.startTrace("DriveTrain");
     yawBuffer.addSample(RobotController.getFPGATime() / 1e6, m_gyro.getRotation2d());
+    poseEstimator.setDriveMeasurementStdDevs(new double[]{0.1, 0.1, 0.1});
     for (var estimator : estimators) {
       var poseEstimates = estimator.poll();
-      System.out.println("poseEstimates " + poseEstimates.length);
+      // System.out.println("poseEstimates " + poseEstimates.length);
       for (var poseEstimate : poseEstimates) {
         poseEstimator.addVisionMeasurement(
             poseEstimate.pose(),
-            poseEstimate.timestamp()
-        /*
-         * new double[] {
-         * poseEstimate.translationalStdDevs(),
-         * poseEstimate.translationalStdDevs(),
-         * poseEstimate.yawStdDevs()
-         * });
-         */);
+            poseEstimate.timestamp(),
+            new double[] {
+                poseEstimate.translationalStdDevs(),
+                poseEstimate.translationalStdDevs(),
+                poseEstimate.yawStdDevs()
+            });
+
       }
     }
 
@@ -201,8 +230,10 @@ public class DriveTrain extends SubsystemBase {
       angle.set(-m_odometry.getPoseMeters().getRotation().getDegrees());
 
     }
+    //poseEstimator.setDriveMeasurementStdDevs(getDriveStdDevs());
 
-    poseEstimator.update(
+    poseEstimator.updateWithTime(
+        RobotController.getTime() / 1e6,
         m_gyro.getRotation2d(),
         new SwerveModulePosition[] {
             m_frontLeft.getPosition(),
@@ -367,7 +398,193 @@ public class DriveTrain extends SubsystemBase {
     var swerveModuleStates = DriveConstants.kDriveKinematics.toSwerveModuleStates(speeds);
     setModuleStates(swerveModuleStates);
   }
+
+  /**
+   * Estimate drive wheel slippage by comparing the actual wheel velocities to the
+   * idealized wheel
+   * velocities. If there is a significant deviation, then a wheel(s) is slipping,
+   * and we should
+   * raise the estimated standard deviation of the drivebase odometry to trust the
+   * wheel encoders
+   * less.
+   *
+   * @return An array of length 3, containing the estimated standard deviations in
+   *         each axis (x, y,
+   *         yaw)
+   */
+  private double[] getDriveStdDevs() {
+    var robotRelativeSpeeds = getChassisSpeeds();
+    var fieldRelativeSpeeds = ChassisSpeeds.fromRobotRelativeSpeeds(robotRelativeSpeeds, m_gyro.getRotation2d());
+
+    var moduleStates = getSwerveModuleStates();
+    // Get idealized states from the current robot velocity.
+    var idealStates = DriveConstants.kDriveKinematics.toSwerveModuleStates(getChassisSpeeds());
+
+    double xSquaredSum = 0;
+    double ySquaredSum = 0;
+
+    for (int i = 0; i < 4; i++) {
+      var measuredVector = new Translation2d(
+          moduleStates[i].speedMetersPerSecond, moduleStates[i].angle);
+      var idealVector = new Translation2d(idealStates[i].speedMetersPerSecond, idealStates[i].angle);
+
+      // Compare the state vectors and get the delta between them.
+      var xDelta = idealVector.getX() - measuredVector.getX();
+      var yDelta = idealVector.getY() - measuredVector.getY();
+
+      // Square the delta and add it to a sum
+      xSquaredSum += xDelta * xDelta;
+      ySquaredSum += yDelta * yDelta;
+    }
+
+    // Sqrt of avg of squared deltas = standard deviation
+    // Rotate to convert to field relative
+    double scalar = 15;
+    var stdDevs = new Translation2d(
+        scalar * (Math.sqrt(xSquaredSum) / 4), scalar * (Math.sqrt(ySquaredSum) / 4))
+        .rotateBy(m_gyro.getRotation2d());
+
+    // If translating and rotating at the same time, odometry drifts pretty badly in
+    // the
+    // direction perpendicular to the direction of translational travel.
+    // This factor massively distrusts odometry in that direction when translating
+    // and rotating
+    // at the same time.
+    var scaledSpeed = new Translation2d(
+        fieldRelativeSpeeds.vxMetersPerSecond / DriveConstants.kMaxSpeedMetersPerSecond,
+        fieldRelativeSpeeds.vyMetersPerSecond / DriveConstants.kMaxSpeedMetersPerSecond)
+        .rotateBy(Rotation2d.kCCW_90deg)
+        .times(
+            1 * Math.abs(fieldRelativeSpeeds.omegaRadiansPerSecond / DriveConstants.kMaxAngularSpeed));
+
+    // Add a minimum to account for mechanical slop and to prevent divide by 0
+    // errors
+    return new double[] {
+        Math.abs(stdDevs.getX()) + Math.abs(scaledSpeed.getX()) + .1,
+        Math.abs(stdDevs.getY()) + Math.abs(scaledSpeed.getY()) + .1,
+        .001
+    };
+  }
+
+  public Command joystickDrive(DoubleSupplier xSupplier, DoubleSupplier ySupplier, DoubleSupplier zSupplier) {
+    return run(
+        () -> {
+          // double multiplier = (((joystick.getThrottle() * -1) + 1) / 2); // turbo mode
+          double z = zSupplier.getAsDouble();
+          double x = xSupplier.getAsDouble();
+          double y = ySupplier.getAsDouble();
+
+          /*
+           * // limiting x/y on input methods
+           * x = Math.sin(Math.atan2(x, y)) *
+           * Math.min(Math.max(Math.abs(y), Math.abs(x)), 1);
+           * y = Math.cos(Math.atan2(x, y)) *
+           * Math.min(Math.max(Math.abs(y), Math.abs(x)), 1);
+           */
+          double deadband = OperatorConstants.kLogitech
+              ? OperatorConstants.kLogitechDeadband
+              : OperatorConstants.kDriveDeadband;
+
+          /*
+           * if (MathUtil.isNear(elevator.getSetpointPose(), ElevatorState.Handoff.height,
+           * 0.02)) {
+           * // x = accelfilterxBase.calculate(x);
+           * // y = accelfilteryBase.calculate(y);
+           * } else if (MathUtil.isNear(elevator.getSetpointPose(),
+           * ElevatorState.Level2.height, 0.02)) {
+           * //x = accelfilterxL2.calculate(x);
+           * //y = accelfilteryL2.calculate(y);
+           * } else if (MathUtil.isNear(elevator.getSetpointPose(),
+           * ElevatorState.Level3.height, 0.02)) {
+           * //x = accelfilterxL3.calculate(x);
+           * //y = accelfilteryL3.calculate(y);
+           * } else if (MathUtil.isNear(elevator.getSetpointPose(),
+           * ElevatorState.Level4.height, 0.02)) {
+           * x = accelfilterxL4.calculate(x);
+           * y = accelfilteryL4.calculate(y);
+           * }
+           */
+
+          this.drive(
+              MathUtil.applyDeadband(y, deadband),
+              MathUtil.applyDeadband(x, deadband),
+              MathUtil.applyDeadband(z * -1, deadband),
+              true);
+        });
+  }
+
+  public Command autoAlign(
+      Supplier<DriveSetpoints> _setpoint,
+      Optional<DoubleSupplier> xSupplier,
+      Optional<DoubleSupplier> ySupplier,
+      Optional<DoubleSupplier> omegaSupplier) {
+    return run(() -> {
+      if (xSupplier.isPresent() && ySupplier.isPresent() && omegaSupplier.isPresent()) {
+        if (Math.abs(xSupplier.get().getAsDouble()) > 0.05
+            || Math.abs(ySupplier.get().getAsDouble()) > 0.05
+            || Math.abs(omegaSupplier.get().getAsDouble()) > 0.05) {
+          joystickDrive(xSupplier.get(), ySupplier.get(), omegaSupplier.get()).execute();
+          return;
+        }
+      }
+
+      this.setpoint = _setpoint.get();
+      DogLog.log("Drive/Setpoint", this.setpoint.getPose());
+
+      repulsorFieldPlanner.setGoal(this.setpoint.getPose().getTranslation());
+
+      var robotPose = getPose();
+      SwerveSample cmd = repulsorFieldPlanner.getCmd(
+          robotPose,
+          getChassisSpeeds(),
+          DriveConstants.kMaxSpeedMetersPerSecond,
+          true);
+
+      // Apply the trajectory with rotation adjustment
+      SwerveSample adjustedSample = new SwerveSample(
+          cmd.t,
+          cmd.x,
+          cmd.y,
+          this.setpoint.getPose().getRotation().getRadians(),
+          cmd.vx,
+          cmd.vy,
+          0,
+          cmd.ax,
+          cmd.ay,
+          cmd.alpha,
+          cmd.moduleForcesX(),
+          cmd.moduleForcesY());
+
+      // Apply the adjusted sample
+      followTrajectory(adjustedSample);
+    })
+        .withName("AutoAlign");
+  }
+
+  public void followTrajectory(SwerveSample referenceState) {
+    if (true)
+      return;
+    Pose2d pose = this.getPose();
+    double xFF = referenceState.vx;
+    double yFF = referenceState.vy;
+    double rotationFF = referenceState.omega;
+
+    double xFeedback = xController.calculate(pose.getX(), referenceState.x);
+    double yFeedback = yController.calculate(pose.getY(), referenceState.y);
+    double rotationFeedback = rController.calculate(
+        pose.getRotation().getRadians(),
+        referenceState.heading);
+
+    ChassisSpeeds out = ChassisSpeeds.fromFieldRelativeSpeeds(
+        xFF + xFeedback,
+        yFF + yFeedback,
+        rotationFF + rotationFeedback,
+        pose.getRotation());
+    setChassisSpeeds(out);
+
+  }
 }
+  
 /*
  * public Pose2d[] getSwerveModulePoses(Pose2d robotPose) {
  * Pose2d[] poseArr = new Pose2d[swerveDriveConfiguration.moduleCount];

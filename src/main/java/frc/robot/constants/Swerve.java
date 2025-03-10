@@ -1,11 +1,26 @@
 package frc.robot.constants;
 
+import static edu.wpi.first.units.Units.Inches;
+import static edu.wpi.first.units.Units.Millimeters;
+
 import com.revrobotics.spark.config.ClosedLoopConfig.FeedbackSensor;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.config.SparkMaxConfig;
+
+import choreo.util.ChoreoAllianceFlipUtil;
+import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Pose3d;
+import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.util.Units;
+import edu.wpi.first.util.struct.Struct;
+import edu.wpi.first.util.struct.StructGenerator;
+import edu.wpi.first.util.struct.StructSerializable;
+import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.DriverStation.Alliance;
+import frc.robot.subsystems.vision.FiducialPoseEstimator;
 
 public class Swerve {
 
@@ -26,6 +41,7 @@ public class Swerve {
     public static final double kWheelBase = Units.inchesToMeters(26.5);
     // Distance between front and back wheels on robot
 
+    public static final double kBumperWidth = Inches.of(37.75).in(Millimeters);
     public static final double kDriveBaseRadius = Math.sqrt(
       Math.pow(kTrackWidth / 2, 2) + Math.pow(kWheelBase / 2, 2)
     ); // Distance from farthest wheel to center
@@ -205,5 +221,75 @@ public class Swerve {
         }
     }
     }
+  public static enum DriveSetpoints implements StructSerializable {
+    A(FiducialPoseEstimator.tagLayout.getTagPose(18).get(), true),
+    B(FiducialPoseEstimator.tagLayout.getTagPose(18).get(), false),
+    C(FiducialPoseEstimator.tagLayout.getTagPose(17).get(), true),
+    D(FiducialPoseEstimator.tagLayout.getTagPose(17).get(), false),
+    E(FiducialPoseEstimator.tagLayout.getTagPose(22).get(), true),
+    F(FiducialPoseEstimator.tagLayout.getTagPose(22).get(), false),
+    G(FiducialPoseEstimator.tagLayout.getTagPose(21).get(), true),
+    H(FiducialPoseEstimator.tagLayout.getTagPose(21).get(), false),
+    I(FiducialPoseEstimator.tagLayout.getTagPose(20).get(), true),
+    J(FiducialPoseEstimator.tagLayout.getTagPose(20).get(), false),
+    K(FiducialPoseEstimator.tagLayout.getTagPose(19).get(), true),
+    L(FiducialPoseEstimator.tagLayout.getTagPose(19).get(), false),
+    // PROCESSOR(Pose2d.kZero),
+    LEFT_HP(new Pose2d(1.18, 7.24, Rotation2d.fromDegrees(125.989 + 180))),
+    RIGHT_HP(new Pose2d(1.10, 0.89, Rotation2d.fromDegrees(125.989 + 180).unaryMinus()));
+
+    private final Pose2d pose;
+
+    public Pose2d getPose() {
+      boolean isFlipped =
+          DriverStation.getAlliance().isPresent()
+              && DriverStation.getAlliance().get() == Alliance.Red;
+      if (isFlipped) {
+        return ChoreoAllianceFlipUtil.flip(pose);
+      }
+      return pose;
+    }
+
+    static Pose3d mapPose(Pose3d pose) {
+      double angle = pose.getRotation().getAngle();
+      return new Pose3d(
+          pose.getX() + Math.cos(angle) * DriveConstants.kBumperWidth / 2000.0,
+          pose.getY() + Math.sin(angle) * DriveConstants.kBumperWidth / 2000.0,
+          0.0,
+          pose.getRotation());
+    }
+
+    DriveSetpoints(Pose3d tag, boolean side) {
+      double sideOffset = 0.32 / 2;
+
+      Pose3d mappedPose = mapPose(tag);
+      Rotation3d rotation = mappedPose.getRotation();
+      double baseAngle = rotation.getAngle();
+      double cos = Math.cos(baseAngle);
+      double sin = Math.sin(baseAngle);
+      double xOffset = sideOffset * sin;
+      double yOffset = sideOffset * cos;
+      if (side) {
+        this.pose =
+            new Pose2d(
+                mappedPose.getX() + xOffset,
+                mappedPose.getY() - yOffset,
+                rotation.toRotation2d().plus(Rotation2d.kPi));
+      } else {
+        this.pose =
+            new Pose2d(
+                mappedPose.getX() - xOffset,
+                mappedPose.getY() + yOffset,
+                rotation.toRotation2d().plus(Rotation2d.kPi));
+      }
+    }
+
+    DriveSetpoints(Pose2d pose) {
+      this.pose = pose;
+    }
+
+    public static final Struct<DriveSetpoints> struct =
+        StructGenerator.genEnum(DriveSetpoints.class);
+  }
 
 }
