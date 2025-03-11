@@ -6,6 +6,15 @@ package frc.robot.subsystems.superstructure;
 
 import static edu.wpi.first.units.Units.*;
 
+import com.ctre.phoenix6.SignalLogger;
+import com.ctre.phoenix6.configs.TalonFXConfiguration;
+import com.ctre.phoenix6.configs.TalonFXSConfiguration;
+import com.ctre.phoenix6.controls.Follower;
+import com.ctre.phoenix6.controls.MotionMagicVoltage;
+import com.ctre.phoenix6.controls.VoltageOut;
+import com.ctre.phoenix6.hardware.TalonFXS;
+import com.ctre.phoenix6.sim.ChassisReference;
+import com.ctre.phoenix6.sim.TalonFXSSimState;
 import com.revrobotics.RelativeEncoder;
 import com.revrobotics.sim.SparkMaxSim;
 import com.revrobotics.spark.SparkBase.PersistMode;
@@ -22,6 +31,7 @@ import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.trajectory.TrapezoidProfile.Constraints;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.units.measure.Angle;
+import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.units.measure.LinearVelocity;
 import edu.wpi.first.units.measure.MutAngle;
@@ -30,6 +40,7 @@ import edu.wpi.first.units.measure.MutLinearVelocity;
 import edu.wpi.first.units.measure.MutVoltage;
 import edu.wpi.first.wpilibj.Notifier;
 import edu.wpi.first.wpilibj.RobotController;
+import edu.wpi.first.wpilibj.simulation.DCMotorSim;
 import edu.wpi.first.wpilibj.simulation.ElevatorSim;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.util.Color8Bit;
@@ -67,76 +78,36 @@ public class Elevator extends SubsystemBase {
 
   }
 
-  private final ProfiledPIDController m_elevatorPIDController = new ProfiledPIDController(
-      ElevatorConstants.kElevatorkP,
-      ElevatorConstants.kElevatorkI,
-      ElevatorConstants.kElevatorkD,
-      new Constraints(
-          ElevatorConstants.kElevatorMaxVelocity,
-          ElevatorConstants.kElevatorMaxAcceleration));
-
-  private final ElevatorFeedforward m_ElevatorFeedforwardStage1 = new ElevatorFeedforward(
-      ElevatorConstants.kElevatorkS,
-      ElevatorConstants.kElevatorkGStage1,
-      ElevatorConstants.kElevatorkV,
-      ElevatorConstants.kElevatorkA);
-  private final ElevatorFeedforward m_ElevatorFeedforwardStage2 = new ElevatorFeedforward(
-      ElevatorConstants.kElevatorkS + .1,
-      ElevatorConstants.kElevatorkGStage2,
-      ElevatorConstants.kElevatorkV,
-      ElevatorConstants.kElevatorkA);
-
-  private SparkMax elevatorMotor = new SparkMax(
-      CANIds.kElevatorMotorCanId,
-      MotorType.kBrushless);
-  private RelativeEncoder elevatorEncoder = elevatorMotor.getEncoder();
-
-  private SparkMax elevatorFollowerMotor = new SparkMax(
-      CANIds.kElevatorMotorFollowerCanId,
-      MotorType.kBrushless);
+  private TalonFXS elevatorMotor = new TalonFXS(
+      CANIds.kElevatorMotorCanId);
+  private TalonFXS elevatorFollower = new TalonFXS(
+      CANIds.kElevatorMotorFollowerCanId);
 
   private ElevatorState elevatorCurrentTarget = ElevatorState.Min;
   private Notifier simNotifier = null;
 
   private DCMotor elevatorMotorModel = DCMotor.getNEO(2);
-  private SparkMaxSim elevatorMotorSim;
+
   private final ElevatorSim m_elevatorSim = new ElevatorSim(
       elevatorMotorModel,
       PhysicalRobotConstants.kElevatorGearing,
       PhysicalRobotConstants.kCarriageMass,
       PhysicalRobotConstants.kElevatorDrumRadius,
-      PhysicalRobotConstants.kMinElevatorCarriageHeightMeters,
+      0,
       PhysicalRobotConstants.kMaxElevatorStage1HeightMeters,
-      true,
+      false,
       0,
       0.0,
       0.0);
-  private final MutVoltage m_appliedVoltage = Volts.mutable(0);
-  // Mutable holder for unit-safe linear distance values, persisted to avoid
-  // reallocation.
-  private final MutDistance m_distance = Meters.mutable(0);
-  private final MutAngle m_rotations = Rotations.mutable(0);
-  // Mutable holder for unit-safe linear velocity values, persisted to avoid
-  // reallocation.
-  private final MutLinearVelocity m_velocity = MetersPerSecond.mutable(0);
+  private final VoltageOut m_voltReq = new VoltageOut(0.0);
 
   final SysIdRoutine sysIdRoutine = new SysIdRoutine(
-      new SysIdRoutine.Config(Volts.per(Second).of(0.5), Volts.of(4.5), Seconds.of(10)),
+      new SysIdRoutine.Config(Volts.per(Second).of(0.75), Volts.of(4.5), Seconds.of(10),
+          (state) -> SignalLogger.writeString("state", state.toString())),
       new SysIdRoutine.Mechanism(
-          (voltage) -> elevatorMotor.setVoltage(voltage),
+          (volts) -> elevatorMotor.setControl(m_voltReq.withOutput(volts.in(Volts))),
 
-          log -> {
-            // Record a frame for the shooter motor.
-            log.motor("elevator")
-                .voltage(
-                    m_appliedVoltage.mut_replace(
-                        elevatorMotor.getAppliedOutput() * RobotController.getBatteryVoltage(), Volts))
-                .linearPosition(m_distance.mut_replace(getLinearPositionMeters(),
-                    Meters)) // Records Height in Meters via SysIdRoutineLog.linearPosition
-                .linearVelocity(m_velocity.mut_replace(getVelocityMetersPerSecond(),
-                    MetersPerSecond)); // Records velocity in MetersPerSecond via SysIdRoutineLog.linearVelocity
-          },
-          this));
+          null, this));
 
   public final Trigger atMin = new Trigger(() -> getLinearPosition().isNear(Meters.of(0),
       Inches.of(5)));
@@ -154,57 +125,42 @@ public class Elevator extends SubsystemBase {
      * the SPARK loses power. This is useful for power cycles that may occur
      * mid-operation.
      */
-    elevatorMotor.configure(
-        Configs.elevatorConfig,
-        ResetMode.kResetSafeParameters,
-        PersistMode.kPersistParameters);
-    elevatorFollowerMotor.configure(
-        Configs.elevatorFollowerConfig,
-        ResetMode.kResetSafeParameters,
-        PersistMode.kPersistParameters);
+    var elevatorMotorConfigurator = elevatorMotor.getConfigurator();
+    var followerConfigurator = elevatorFollower.getConfigurator();
+
+    elevatorMotorConfigurator.apply(Configs.elevatorConfig);
+    followerConfigurator.apply(Configs.elevatorFollowerConfig);
+    //elevatorMotor.setControl(m_request);
+    elevatorMotor.getSimState().MotorOrientation = ChassisReference.Clockwise_Positive;
 
     SmartDashboard.putData("elevator.mech2d", Mechanisms.m_mech2d);
+    elevatorFollower.setControl(new Follower(elevatorMotor.getDeviceID(), true));
 
-    elevatorEncoder.setPosition(0);
+    elevatorMotor.setPosition(0);
     // Initialize simulation values
-    elevatorMotorSim = new SparkMaxSim(elevatorMotor, elevatorMotorModel);
     Mechanisms.m_elevatorCarriageMech2d.setColor(new Color8Bit("#ff0000"));
     Mechanisms.m_elevatorStage1Mech2d.setColor(new Color8Bit("#00ff00"));
     if (Robot.isSimulation()) {
       simNotifier = new Notifier(() -> {
         updateSimState();
       });
-      simNotifier.startPeriodic(0.005);
+      simNotifier.startPeriodic(0.02);
     }
   }
 
   public void updateSimState() {
-    m_elevatorSim.setInput(
-        elevatorMotor.getAppliedOutput() * RobotController.getBatteryVoltage());
+    var elevatorMotorSim = elevatorMotor.getSimState();
+    m_elevatorSim.setInputVoltage(
+        elevatorMotorSim.getMotorVoltageMeasure().in(Volts));
 
-    m_elevatorSim.update(0.0050);
-
-    elevatorMotorSim.iterate(
-        ((m_elevatorSim.getVelocityMetersPerSecond() /
-            (PhysicalRobotConstants.kElevatorDrumRadius * 2.0 * Math.PI)) *
-            PhysicalRobotConstants.kElevatorGearing) *
-            60.0,
-        RobotController.getBatteryVoltage(),
-        0.005);
+    m_elevatorSim.update(0.02);
+    elevatorMotorSim.setRawRotorPosition(convertMetersToRotations(m_elevatorSim.getPositionMeters()));
+    elevatorMotorSim.setRotorVelocity(
+      convertMetersToRotations(m_elevatorSim.getVelocityMetersPerSecond()));
 
   }
 
-  private void moveToSetpoint() {
-    var feedforward = convertRotationsToMeters(elevatorEncoder.getPosition()) >= 0.70 ? m_ElevatorFeedforwardStage2 : m_ElevatorFeedforwardStage1;
-
-    elevatorMotor.setVoltage(
-        m_elevatorPIDController.calculate(
-          convertRotationsToMeters(elevatorEncoder.getPosition()),
-            elevatorCurrentTarget.height) +
-            feedforward.calculate(
-                m_elevatorPIDController.getSetpoint().velocity));
-
-  }
+  final MotionMagicVoltage m_request = new MotionMagicVoltage(0);
 
   /**
    * Do not use unless you understand that it exits immediately, NOT
@@ -218,15 +174,19 @@ public class Elevator extends SubsystemBase {
     return Commands.sequence(
         this.runOnce(() -> {
           this.elevatorCurrentTarget = setpoint;
-          m_elevatorPIDController.reset(getLinearPositionMeters());
+
+          m_request.withPosition(convertMetersToRotations(elevatorCurrentTarget.height));
+          elevatorMotor.setControl(m_request);
+          elevatorFollower.setControl(new Follower(elevatorMotor.getDeviceID(), true));
+
         }));
   }
 
   @Override
   public void periodic() {
     Tracer.startTrace("ElevatorPeriodic");
-    moveToSetpoint();
-    /*double height = (elevatorEncoder.getPosition() /
+
+    double height = (elevatorMotor.getPosition().getValueAsDouble() /
         PhysicalRobotConstants.kElevatorGearing) *
         (PhysicalRobotConstants.kElevatorDrumRadius * 2.0 * Math.PI);
     double carriageHeight = Math.min(
@@ -238,7 +198,7 @@ public class Elevator extends SubsystemBase {
     Mechanisms.m_elevatorCarriageMech2d.setLength(
         PhysicalRobotConstants.kMinElevatorCarriageHeightMeters + carriageHeight);
     Mechanisms.m_elevatorStage1Mech2d.setLength(
-        PhysicalRobotConstants.kMinElevatorStage1HeightMeters + stage1Height);*/
+        PhysicalRobotConstants.kMinElevatorStage1HeightMeters + stage1Height);
 
     Tracer.endTrace();
   }
@@ -276,11 +236,11 @@ public class Elevator extends SubsystemBase {
   }
 
   public double getActualPosition() {
-    return elevatorMotor.getEncoder().getPosition();
+    return elevatorMotor.getPosition().getValueAsDouble();
   }
 
   public Distance getLinearPosition() {
-    return convertRotationsToDistance(Rotations.of(elevatorMotor.getEncoder().getPosition()));
+    return convertRotationsToDistance(elevatorMotor.getPosition().getValue());
   }
 
   public double getLinearPositionMeters() {
@@ -288,12 +248,12 @@ public class Elevator extends SubsystemBase {
   }
 
   public double getVelocityMetersPerSecond() {
-    return ((elevatorEncoder.getVelocity() / 60) / PhysicalRobotConstants.kElevatorGearing) *
+    return ((elevatorMotor.getVelocity().getValueAsDouble()) / PhysicalRobotConstants.kElevatorGearing) *
         (2 * Math.PI * PhysicalRobotConstants.kElevatorDrumRadius);
   }
 
   public double getElevatorAppliedOutput() {
-    return elevatorMotor.getAppliedOutput();
+    return elevatorMotor.getClosedLoopOutput().getValue();
   }
 
   public static Distance convertRotationsToDistance(Angle rotations) {
@@ -301,15 +261,27 @@ public class Elevator extends SubsystemBase {
         (rotations.in(Rotations) / PhysicalRobotConstants.kElevatorGearing) *
             (PhysicalRobotConstants.kElevatorDrumRadius * 2 * Math.PI));
   }
+
+  public static LinearVelocity convertRotationsVelocityToMeters(AngularVelocity rotations) {
+    return MetersPerSecond.of(
+        (rotations.in(RotationsPerSecond) / PhysicalRobotConstants.kElevatorGearing) *
+            (PhysicalRobotConstants.kElevatorDrumRadius * 2 * Math.PI));
+  }
+
   public static double convertRotationsToMeters(double rotations) {
     return (rotations /
         PhysicalRobotConstants.kElevatorGearing) *
         (PhysicalRobotConstants.kElevatorDrumRadius * 2.0 * Math.PI);
   }
 
+  public static double convertMetersToRotations(double meters) {
+    return ((meters) /
+        (PhysicalRobotConstants.kElevatorDrumRadius * 2.0 * Math.PI)) * PhysicalRobotConstants.kElevatorGearing;
+  }
+
   public LinearVelocity getVelocity() {
-    return convertRotationsToDistance(
-        Rotations.of(elevatorEncoder.getVelocity())).per(Minute);
+    return convertRotationsVelocityToMeters(
+        elevatorMotor.getVelocity().getValue());
   }
 
   public Command runSysIdRoutine() {

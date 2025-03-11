@@ -44,6 +44,8 @@ import java.util.Optional;
 
 import org.littletonrobotics.urcl.URCL;
 
+import com.ctre.phoenix6.SignalLogger;
+
 /**
  * The VM is configured to automatically run this class, and to call the
  * functions corresponding to
@@ -94,6 +96,7 @@ public class Robot extends TimedRobot {
    */
   public Robot() {
     DataLogManager.start();
+    SignalLogger.start();
     URCL.start();
     DogLog.setOptions(new DogLogOptions().withCaptureDs(true));
     DogLog.setPdh(pdh);
@@ -105,6 +108,7 @@ public class Robot extends TimedRobot {
         new AutoController(driveTrain),
         true,
         driveTrain);
+    //configureBindingsSysid();
     configureBindings();
     autoChooser = new AutoChooser();
 
@@ -117,7 +121,7 @@ public class Robot extends TimedRobot {
   }
 
   public void configureBindingsSysid() {
-    joystick.trigger().onTrue(Wrist.runSysIdRoutine());
+    joystick.trigger().onTrue(Wrist.wristToPosition(WristState.Safe).andThen(elevator.runSysIdRoutine()));
   }
 
   public void configureBindings() {
@@ -149,8 +153,8 @@ public class Robot extends TimedRobot {
 
     joystick.povDown().or(joystick.povDownLeft()).or(joystick.povDownRight()).onTrue(intake());
     joystick.trigger().whileTrue(take.runTakeMotor());
-    joystick.povUp().onTrue(driveTrain.autoAlign(() -> DriveSetpoints.A, Optional.of(joystick::getX), Optional.of(joystick::getX), Optional.of(joystick::getZ)));
-    // joystick.button(6).onTrue(Wrist.runSysIdRoutine());
+    joystick.povUp().onTrue(driveTrain.autoAlign(() -> DriveSetpoints.B, Optional.of(joystick::getX), Optional.of(joystick::getX), Optional.of(joystick::getZ)));
+    joystick.povRight().onTrue(Wrist.runSysIdRoutine());
   }
 
   /**

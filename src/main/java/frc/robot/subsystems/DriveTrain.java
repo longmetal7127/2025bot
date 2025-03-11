@@ -8,6 +8,8 @@ import java.util.Optional;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 
+import org.opencv.core.Mat;
+
 import com.studica.frc.AHRS;
 
 import choreo.trajectory.SwerveSample;
@@ -130,7 +132,7 @@ public class DriveTrain extends SubsystemBase {
 
   /** Creates a new DriveSubsystem. */
   public DriveTrain() {
-
+    rController.enableContinuousInput(-2 * Math.PI, 2 * Math.PI);
     poseEstimator = new SwervePoseEstimator(
         Swerve.DriveConstants.kDriveKinematics,
         m_gyro.getRotation2d(),
@@ -179,59 +181,45 @@ public class DriveTrain extends SubsystemBase {
   @Override
   public void periodic() {
     Tracer.startTrace("DriveTrain");
-    yawBuffer.addSample(RobotController.getFPGATime() / 1e6, m_gyro.getRotation2d());
-    poseEstimator.setDriveMeasurementStdDevs(new double[]{0.1, 0.1, 0.1});
-    for (var estimator : estimators) {
-      var poseEstimates = estimator.poll();
-      // System.out.println("poseEstimates " + poseEstimates.length);
-      for (var poseEstimate : poseEstimates) {
-        poseEstimator.addVisionMeasurement(
-            poseEstimate.pose(),
-            poseEstimate.timestamp(),
-            new double[] {
-                poseEstimate.translationalStdDevs(),
-                poseEstimate.translationalStdDevs(),
-                poseEstimate.yawStdDevs()
-            });
 
-      }
-    }
-
-    // sim case
     if (Robot.isSimulation()) {
       double dt = 0.02;
 
       // Update the odometry in the periodic block
+      Tracer.startTrace("increment");
       m_frontLeft.incrementSim(dt);
       m_frontRight.incrementSim(dt);
       m_rearLeft.incrementSim(dt);
       m_rearRight.incrementSim(dt);
+      Tracer.endTrace();
+      Tracer.startTrace("angleSet");
 
-      // get velocities of x, y, and rot
-      /*
-       * ChassisSpeeds speeds =
-       * Swerve.DriveConstants.kDriveKinematics.toChassisSpeeds(
-       * new SwerveModuleState[] {
-       * m_frontLeft.getState(),
-       * m_frontRight.getState(),
-       * m_rearLeft.getState(),
-       * m_rearRight.getState(),
-       * });
-       * m_odometry.resetPose(
-       * m_odometry
-       * .getPoseMeters()
-       * .exp(
-       * new Twist2d(
-       * speeds.vxMetersPerSecond * dt,
-       * speeds.vyMetersPerSecond * dt,
-       * speeds.omegaRadiansPerSecond * dt)));
-       */
-      // update robot pose
       angle.set(-m_odometry.getPoseMeters().getRotation().getDegrees());
+      Tracer.endTrace();
+
 
     }
-    //poseEstimator.setDriveMeasurementStdDevs(getDriveStdDevs());
+    // poseEstimator.setDriveMeasurementStdDevs(getDriveStdDevs());
+    if (!Robot.isSimulation()) {
+      yawBuffer.addSample(RobotController.getFPGATime() / 1e6, m_gyro.getRotation2d());
+      poseEstimator.setDriveMeasurementStdDevs(new double[] { 0.1, 0.1, 0.1 });
+      for (var estimator : estimators) {
+        var poseEstimates = estimator.poll();
+        // System.out.println("poseEstimates " + poseEstimates.length);
+        for (var poseEstimate : poseEstimates) {
+          poseEstimator.addVisionMeasurement(
+              poseEstimate.pose(),
+              poseEstimate.timestamp(),
+              new double[] {
+                  poseEstimate.translationalStdDevs(),
+                  poseEstimate.translationalStdDevs(),
+                  poseEstimate.yawStdDevs()
+              });
 
+        }
+      }
+    }
+    Tracer.startTrace("buh");
     poseEstimator.updateWithTime(
         RobotController.getTime() / 1e6,
         m_gyro.getRotation2d(),
@@ -241,7 +229,7 @@ public class DriveTrain extends SubsystemBase {
             m_rearLeft.getPosition(),
             m_rearRight.getPosition(),
         });
-
+    Tracer.endTrace();
     Tracer.endTrace();
   }
 
@@ -562,8 +550,7 @@ public class DriveTrain extends SubsystemBase {
   }
 
   public void followTrajectory(SwerveSample referenceState) {
-    if (true)
-      return;
+
     Pose2d pose = this.getPose();
     double xFF = referenceState.vx;
     double yFF = referenceState.vy;
@@ -584,7 +571,7 @@ public class DriveTrain extends SubsystemBase {
 
   }
 }
-  
+
 /*
  * public Pose2d[] getSwerveModulePoses(Pose2d robotPose) {
  * Pose2d[] poseArr = new Pose2d[swerveDriveConfiguration.moduleCount];

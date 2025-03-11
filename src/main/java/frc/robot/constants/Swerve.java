@@ -260,7 +260,7 @@ public class Swerve {
     }
 
     DriveSetpoints(Pose3d tag, boolean side) {
-      double sideOffset = 0.32 / 2;
+      double sideOffset = 0.01;
 
       Pose3d mappedPose = mapPose(tag);
       Rotation3d rotation = mappedPose.getRotation();

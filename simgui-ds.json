@@ -30,7 +30,7 @@
       ],
       "povConfig": [
         {
-          "key0": 328,
+          "key0": 76,
           "key135": 323,
           "key180": 322,
           "key225": 321,
@@ -45,8 +45,7 @@
     {
       "axisConfig": [
         {
-          "decKey": 74,
-          "incKey": 76
+          "decKey": 74
         },
         {
           "decKey": 73,

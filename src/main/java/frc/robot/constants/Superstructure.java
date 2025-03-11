@@ -7,6 +7,12 @@ package frc.robot.constants;
 import static edu.wpi.first.units.Units.*;
 
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
+import com.ctre.phoenix6.configs.TalonFXSConfiguration;
+import com.ctre.phoenix6.signals.GravityTypeValue;
+import com.ctre.phoenix6.signals.InvertedValue;
+import com.ctre.phoenix6.signals.MotorArrangementValue;
+import com.ctre.phoenix6.signals.NeutralModeValue;
+import com.ctre.phoenix6.signals.StaticFeedforwardSignValue;
 import com.revrobotics.spark.config.LimitSwitchConfig;
 import com.revrobotics.spark.config.SparkMaxConfig;
 import edu.wpi.first.math.util.Units;
@@ -32,8 +38,8 @@ public class Superstructure {
   public static final class Configs {
 
     public static final SparkMaxConfig WristConfig = new SparkMaxConfig();
-    public static final SparkMaxConfig elevatorConfig = new SparkMaxConfig();
-    public static final SparkMaxConfig elevatorFollowerConfig = new SparkMaxConfig();
+    public static final TalonFXSConfiguration elevatorConfig = new TalonFXSConfiguration();
+    public static final TalonFXSConfiguration elevatorFollowerConfig = new TalonFXSConfiguration();
     public static final SparkMaxConfig takeConfig = new SparkMaxConfig();
 
     static {
@@ -44,34 +50,68 @@ public class Superstructure {
           .voltageCompensation(12);
       WristConfig.absoluteEncoder.inverted(true).zeroCentered(false);
       // elevatorConfig.encoder.positionConversionFactor(0.048676).velocityConversionFactor(0.048676);
-      elevatorConfig.idleMode(IdleMode.kBrake).inverted(true).smartCurrentLimit(60).voltageCompensation(12);
-      elevatorFollowerConfig.smartCurrentLimit(60).follow(CANIds.kElevatorMotorCanId, true).voltageCompensation(12);
+
+      elevatorConfig.Commutation.
+        withMotorArrangement(MotorArrangementValue.NEO_JST);
+      elevatorConfig.CurrentLimits
+          .withStatorCurrentLimit(Amps.of(120))
+          .withStatorCurrentLimitEnable(true);
+      elevatorConfig.MotorOutput
+          .withNeutralMode(NeutralModeValue.Brake)
+          .withInverted(InvertedValue.Clockwise_Positive);
+
+      elevatorConfig.Slot0
+            .withGravityType(GravityTypeValue.Elevator_Static)
+          .withKV(ElevatorConstants.kElevatorkV)
+          .withKA(ElevatorConstants.kElevatorkA)
+          .withKS(ElevatorConstants.kElevatorkS)
+          .withKG(ElevatorConstants.kElevatorkGStage1)
+
+          .withKP(ElevatorConstants.kElevatorkP)
+          .withKI(ElevatorConstants.kElevatorkI)
+          .withKD(ElevatorConstants.kElevatorkD)
+
+          .withStaticFeedforwardSign(StaticFeedforwardSignValue.UseVelocitySign);
+
+
+      elevatorConfig.MotionMagic
+          .withMotionMagicAcceleration(ElevatorConstants.kElevatorMaxAcceleration)
+          .withMotionMagicCruiseVelocity(ElevatorConstants.kElevatorMaxVelocity);
+          //.withMotionMagicJerk(1600);
+    elevatorFollowerConfig.Commutation.
+          withMotorArrangement(MotorArrangementValue.NEO_JST);
+  
+      elevatorFollowerConfig.CurrentLimits
+          .withStatorCurrentLimit(Amps.of(120))
+          .withStatorCurrentLimitEnable(true);
+
       takeConfig.idleMode(IdleMode.kBrake);
-      takeConfig.limitSwitch.forwardLimitSwitchType(LimitSwitchConfig.Type.kNormallyOpen).forwardLimitSwitchEnabled(false);
-      takeConfig.closedLoop.pidf(5, 0,0, 1.1);
+      takeConfig.limitSwitch.forwardLimitSwitchType(LimitSwitchConfig.Type.kNormallyOpen)
+          .forwardLimitSwitchEnabled(false);
+      takeConfig.closedLoop.pidf(5, 0, 0, 1.1);
       takeConfig.signals.primaryEncoderVelocityAlwaysOn(true).primaryEncoderPositionAlwaysOn(true);
     }
   }
 
   public static final class ElevatorConstants {
-    public static final double kElevatorkGStage1 = 0.78141;
+    public static final double kElevatorkGStage1 = 0.64125;
     public static final double kElevatorkGStage2 = 0.9465;
 
-    public static final double kElevatorkS = 0.8672;
-    public static final double kElevatorkV = 1.5766;
-    public static final double kElevatorkA = 0.42745;
+    public static final double kElevatorkS = 0.60007;
+    public static final double kElevatorkV = 0.113;
+    public static final double kElevatorkA = 0;
 
-    public static final double kElevatorkP = 33.899;
+    public static final double kElevatorkP = 4;
     public static final double kElevatorkI = 0;
-    public static final double kElevatorkD = 2.6;
+    public static final double kElevatorkD = 0.04;
 
-    public static final double kElevatorMaxVelocity = Meters.of(4)
+    public static final double kElevatorMaxVelocity = Rotations.of(65)
         .per(Second)
-        .in(MetersPerSecond);
-    public static final double kElevatorMaxAcceleration = Meters.of(3)
+        .in(RotationsPerSecond);
+    public static final double kElevatorMaxAcceleration = Rotations.of(160)
         .per(Second)
         .per(Second)
-        .in(MetersPerSecondPerSecond);
+        .in(RotationsPerSecondPerSecond);
   }
 
   public static final class WristConstants {
@@ -81,11 +121,11 @@ public class Superstructure {
     public static final double kWristkV = 1.0745;
     public static final double kWristkA = 0.61657;
 
-    public static final double kWristkP = 21;
+    public static final double kWristkP = 31;
     public static final double kWristkI = 0;
-    public static final double kWristkD = 0.4;
+    public static final double kWristkD = 0;
 
-    public static final double kWristMaxVelocityRPM = 15;
+    public static final double kWristMaxVelocityRPM = 20;
     public static final double kWristMaxAccelerationRPMperSecond = 10;
     public static final Angle kMinAngle = Degrees.of(0);
     public static final Angle kMaxAngle = Degrees.of(110);

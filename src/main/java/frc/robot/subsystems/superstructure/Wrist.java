@@ -13,6 +13,9 @@ import com.revrobotics.sim.SparkMaxSim;
 import com.revrobotics.spark.SparkBase.PersistMode;
 import com.revrobotics.spark.SparkBase.ResetMode;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
+
+import dev.doglog.DogLog;
+
 import com.revrobotics.spark.SparkMax;
 import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.math.MathUtil;
@@ -161,14 +164,15 @@ public class Wrist extends SubsystemBase {
   }
 
   public void updateSimState() {
-    m_wristSim.setInput(
+    DogLog.log("Wrist/vbatt", RobotController.getBatteryVoltage());
+    m_wristSim.setInputVoltage(
         wristMotor.getAppliedOutput() * RobotController.getBatteryVoltage());
 
     m_wristSim.update(0.0050);
 
     wristMotorSim.iterate(
         Units.radiansPerSecondToRotationsPerMinute(
-            m_wristSim.getVelocityRadPerSec()),
+            m_wristSim.getVelocityRadPerSec()) * PhysicalRobotConstants.kWristReduction,
         RobotController.getBatteryVoltage(),
         0.005);
     absoluteEncoderSim.iterate(Units.radiansPerSecondToRotationsPerMinute(
@@ -183,9 +187,13 @@ public class Wrist extends SubsystemBase {
         getArmActualPosition(),
         Units.degreesToRotations(wristCurrentTarget.angle));
     State setpointState = m_wristPIDController.getSetpoint();
+
+    double ffOut = m_wristFeedforward.calculate(setpointState.position + 0.36111111, setpointState.velocity);
+    DogLog.log("Wrist/pidOutput", pidOutput);
+    DogLog.log("Wrist/FFOut", ffOut);
     wristMotor.setVoltage(
         pidOutput +
-            m_wristFeedforward.calculate(setpointState.position + 0.36111111, setpointState.velocity));
+            ffOut);
   }
 
   /**

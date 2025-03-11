@@ -181,13 +181,14 @@ public class FiducialPoseEstimator {
     }
 
     private void trigEstimate(FiducialPoseEstimate estimate) {
+
         var tag = estimate.tagsUsed()[0];
 
         // Fall back to SolvePnP if key data is missing (position of tag and gyro yaw)
         var tagPoseOptional = tagLayout.getTagPose(tag.id());
         var gyroYaw = gyroYawGetter.get(estimate.timestamp());
         if (tagPoseOptional.isEmpty() || gyroYaw == null) {
-            //System.out.println("HUH");
+            System.out.println("isEmpty");
             solvePnPEstimate(estimate);
             return;
         }
@@ -256,7 +257,8 @@ public class FiducialPoseEstimator {
     }
 
     private void solvePnPEstimate(FiducialPoseEstimate estimate) {
-        //System.out.println("FALLING BACK TO PNP");
+
+        System.out.println("Running solvepnp");
         // Filter out obviously bad data
         if (Math.abs(estimate.robotPoseEstimate().getZ()) > .025) {
             //System.out.println("Z" + estimate.robotPoseEstimate().getZ());
@@ -275,7 +277,7 @@ public class FiducialPoseEstimator {
 
             return;
         }
-        double maxAmbiguity = .2;
+        double maxAmbiguity = .4;
         if (estimate.tagsUsed().length == 1 && estimate.tagsUsed()[0].ambiguity() > maxAmbiguity) {
             //System.out.println("Ambiguity");
 
