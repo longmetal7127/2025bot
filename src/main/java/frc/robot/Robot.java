@@ -64,24 +64,6 @@ public class Robot extends TimedRobot {
   private Take take = new Take();
   private LED led = new LED();
 
-
-  private double rateBase = 1000;
-  private double rateL2 = 1000;
-  private double rateL3 = 1000;
-  private double rateL4 = 1;
-
-  private SlewRateLimiter accelfilterxBase = new SlewRateLimiter(rateBase);
-  private SlewRateLimiter accelfilteryBase = new SlewRateLimiter(rateBase);
-
-  private SlewRateLimiter accelfilterxL2 = new SlewRateLimiter(rateL2);
-  private SlewRateLimiter accelfilteryL2 = new SlewRateLimiter(rateL2);
-
-  private SlewRateLimiter accelfilterxL3 = new SlewRateLimiter(rateL3);
-  private SlewRateLimiter accelfilteryL3 = new SlewRateLimiter(rateL3);
-
-  private SlewRateLimiter accelfilterxL4 = new SlewRateLimiter(rateL4);
-  private SlewRateLimiter accelfilteryL4 = new SlewRateLimiter(rateL4);
-
   private AutoFactory autoFactory;
   private final AutoChooser autoChooser;
   public static CommandJoystick joystick = new CommandJoystick(
@@ -116,7 +98,11 @@ public class Robot extends TimedRobot {
     SmartDashboard.putData("hiii", autoChooser);
     RobotModeTriggers.autonomous().whileTrue(autoChooser.selectedCommandScheduler());
 
-    driveTrain.setDefaultCommand(driveTrain.joystickDrive(joystick::getX, joystick::getY, joystick::getZ));
+    driveTrain.setDefaultCommand(driveTrain.joystickDrive(joystick::getX, joystick::getY, joystick::getZ, Optional.of(elevator::getSetpointPose)));
+    
+    take.hasCoral.onTrue(led.setGreen());
+    take.hasCoral.onFalse(led.setDefault());
+
     Epilogue.bind(this);
   }
 

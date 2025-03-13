@@ -21,6 +21,7 @@ import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
+import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Rotation3d;
@@ -86,8 +87,9 @@ public class DriveTrain extends SubsystemBase {
       DriveConstants.kBackRightChassisAngularOffset);
   private final TimeInterpolatableBuffer<Rotation2d> yawBuffer = TimeInterpolatableBuffer.createBuffer(.25);
 
-  // sim zero timer
-  private double bufferZeroTime = 0.25;
+  private SlewRateLimiter accelfilterxL4 = new SlewRateLimiter(1);
+  private SlewRateLimiter accelfilteryL4 = new SlewRateLimiter(1);
+
   public DriveSetpoints setpoint = DriveSetpoints.A;
 
   // The gyro sensor
@@ -454,7 +456,7 @@ public class DriveTrain extends SubsystemBase {
     };
   }
 
-  public Command joystickDrive(DoubleSupplier xSupplier, DoubleSupplier ySupplier, DoubleSupplier zSupplier) {
+  public Command joystickDrive(DoubleSupplier xSupplier, DoubleSupplier ySupplier, DoubleSupplier zSupplier, Optional<DoubleSupplier> heightSupplier) {
     return run(
         () -> {
           // double multiplier = (((joystick.getThrottle() * -1) + 1) / 2); // turbo mode
@@ -473,25 +475,11 @@ public class DriveTrain extends SubsystemBase {
               ? OperatorConstants.kLogitechDeadband
               : OperatorConstants.kDriveDeadband;
 
-          /*
-           * if (MathUtil.isNear(elevator.getSetpointPose(), ElevatorState.Handoff.height,
-           * 0.02)) {
-           * // x = accelfilterxBase.calculate(x);
-           * // y = accelfilteryBase.calculate(y);
-           * } else if (MathUtil.isNear(elevator.getSetpointPose(),
-           * ElevatorState.Level2.height, 0.02)) {
-           * //x = accelfilterxL2.calculate(x);
-           * //y = accelfilteryL2.calculate(y);
-           * } else if (MathUtil.isNear(elevator.getSetpointPose(),
-           * ElevatorState.Level3.height, 0.02)) {
-           * //x = accelfilterxL3.calculate(x);
-           * //y = accelfilteryL3.calculate(y);
-           * } else if (MathUtil.isNear(elevator.getSetpointPose(),
-           * ElevatorState.Level4.height, 0.02)) {
-           * x = accelfilterxL4.calculate(x);
-           * y = accelfilteryL4.calculate(y);
-           * }
-           */
+          if(heightSupplier.isPresent()) 
+            if (MathUtil.isNear(heightSupplier.get().getAsDouble(), ElevatorState.Level4.height, 0.02)) {
+              x = accelfilterxL4.calculate(x);
+              y = accelfilteryL4.calculate(y);
+            }
 
           this.drive(
               MathUtil.applyDeadband(y, deadband),
@@ -511,7 +499,7 @@ public class DriveTrain extends SubsystemBase {
         if (Math.abs(xSupplier.get().getAsDouble()) > 0.05
             || Math.abs(ySupplier.get().getAsDouble()) > 0.05
             || Math.abs(omegaSupplier.get().getAsDouble()) > 0.05) {
-          joystickDrive(xSupplier.get(), ySupplier.get(), omegaSupplier.get()).execute();
+          joystickDrive(xSupplier.get(), ySupplier.get(), omegaSupplier.get(), null).execute();
           return;
         }
       }
