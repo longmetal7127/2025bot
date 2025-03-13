@@ -44,6 +44,7 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.Robot;
 import frc.robot.constants.Constants.OperatorConstants;
 import frc.robot.constants.Swerve;
@@ -131,10 +132,11 @@ public class DriveTrain extends SubsystemBase {
       AutoConstants.kRotation.kP,
       AutoConstants.kRotation.kI,
       AutoConstants.kRotation.kD);
+  public Trigger atSetpoint = new Trigger(() -> xErr() <= 0.02 && yErr() <= 0.02 && aErr() <= 1);
 
   /** Creates a new DriveSubsystem. */
   public DriveTrain() {
-    rController.enableContinuousInput(-2 * Math.PI, 2 * Math.PI);
+    rController.enableContinuousInput(-Math.PI, Math.PI);
     poseEstimator = new SwervePoseEstimator(
         Swerve.DriveConstants.kDriveKinematics,
         m_gyro.getRotation2d(),
@@ -166,18 +168,31 @@ public class DriveTrain extends SubsystemBase {
             Units.inchesToMeters(9.375),
             Units.inchesToMeters(21.108355),
             new Rotation3d(0, Units.degreesToRadians(10), 0))),
-        /*
-         * new FiducialPoseEstimator(
-         * 
-         * "Cam_Right",
-         * yawGetter,
-         * poseEstimator::getEstimatedPosition, new Transform3d(
-         * 4.053308,
-         * 9.375,
-         * 21.108355,
-         * new Rotation3d(0, 10, 0)))
-         */ };
 
+        new FiducialPoseEstimator(
+
+            "Cam_Right",
+            yawGetter,
+            poseEstimator::getEstimatedPosition, new Transform3d(
+                Units.inchesToMeters(12.676434),
+                Units.inchesToMeters(-12.438193),
+                Units.inchesToMeters(9.122468),
+                new Rotation3d(0, Units.degreesToRadians(-20), Units.degreesToRadians(20))))
+    };
+
+  }
+  private double aErr() {
+    return Math.abs(
+            getPose().getRotation().getDegrees() - setpoint.getPose().getRotation().getDegrees())
+        % 360;
+  }
+
+  private double xErr() {
+    return Math.abs(getPose().getX() - setpoint.getPose().getX());
+  }
+
+  private double yErr() {
+    return Math.abs(getPose().getY() - setpoint.getPose().getY());
   }
 
   @Override
@@ -198,7 +213,6 @@ public class DriveTrain extends SubsystemBase {
 
       angle.set(-m_odometry.getPoseMeters().getRotation().getDegrees());
       Tracer.endTrace();
-
 
     }
     // poseEstimator.setDriveMeasurementStdDevs(getDriveStdDevs());
@@ -456,7 +470,8 @@ public class DriveTrain extends SubsystemBase {
     };
   }
 
-  public Command joystickDrive(DoubleSupplier xSupplier, DoubleSupplier ySupplier, DoubleSupplier zSupplier, Optional<DoubleSupplier> heightSupplier) {
+  public Command joystickDrive(DoubleSupplier xSupplier, DoubleSupplier ySupplier, DoubleSupplier zSupplier,
+      Optional<DoubleSupplier> heightSupplier) {
     return run(
         () -> {
           // double multiplier = (((joystick.getThrottle() * -1) + 1) / 2); // turbo mode
@@ -475,7 +490,7 @@ public class DriveTrain extends SubsystemBase {
               ? OperatorConstants.kLogitechDeadband
               : OperatorConstants.kDriveDeadband;
 
-          if(heightSupplier.isPresent()) 
+          if (heightSupplier.isPresent())
             if (MathUtil.isNear(heightSupplier.get().getAsDouble(), ElevatorState.Level4.height, 0.02)) {
               x = accelfilterxL4.calculate(x);
               y = accelfilteryL4.calculate(y);
@@ -487,6 +502,59 @@ public class DriveTrain extends SubsystemBase {
               MathUtil.applyDeadband(z * -1, deadband),
               true);
         });
+  }
+
+  public Command autoAlignChooseSetpoint(boolean left, Optional<DoubleSupplier> xSupplier,
+      Optional<DoubleSupplier> ySupplier,
+      Optional<DoubleSupplier> omegaSupplier) {
+    return defer(
+        () -> {
+          int bestBranch = 0;
+          double bestScore = Double.POSITIVE_INFINITY;
+          for (int i = 0; i < 6; i++) {
+            var branchLocation = getBranch(i, left).getPose().getTranslation();
+
+            var robotToBranchVector = branchLocation.minus(poseEstimator.getEstimatedPosition().getTranslation());
+
+            var branchDistanceScore = robotToBranchVector.getNorm();
+
+            var driverControlVector = new Translation2d(xSupplier.get().getAsDouble(), ySupplier.get().getAsDouble());
+            if (Robot.isOnRed()) {
+              driverControlVector = new Translation2d(-driverControlVector.getX(), -driverControlVector.getY());
+            }
+
+            double driverInputScore;
+            if (driverControlVector.getNorm() < .1) {
+              driverInputScore = 0;
+            } else {
+              var robotToBranchAngle = robotToBranchVector.getAngle();
+              var driverControlAngle = driverControlVector.getAngle();
+
+              driverInputScore = driverControlAngle.minus(robotToBranchAngle).getCos() * 2;
+            }
+
+            DogLog.log(
+                "Swerve/Reef Align/Branch " + i + "/Distance score", branchDistanceScore);
+            DogLog.log(
+                "Swerve/Reef Align/Branch " + i + "/Driver input score", driverInputScore);
+            double branchScore = branchDistanceScore - driverInputScore;
+            DogLog.log(
+                "Swerve/Reef Align/Branch " + i + "/Overall score", branchScore);
+
+            if (branchScore < bestScore) {
+              bestBranch = i;
+              bestScore = branchScore;
+            }
+          }
+          final var branch = getBranch(bestBranch, left);
+          return autoAlign(() -> branch, xSupplier, ySupplier, omegaSupplier);
+        })
+        .withName("Reef align " + (left ? "left" : "right"));
+  }
+
+  private DriveSetpoints getBranch(int reefWall, boolean left) {
+
+    return Swerve.REEF[reefWall * 2 + (left ? 0 : 1)];
   }
 
   public Command autoAlign(

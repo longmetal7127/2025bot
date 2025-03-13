@@ -61,6 +61,7 @@ import frc.robot.util.Tracer;
 
 @Logged
 public class Elevator extends SubsystemBase {
+
   public enum ElevatorState {
     Min(0),
     Level1(0),
@@ -103,7 +104,6 @@ public class Elevator extends SubsystemBase {
       0.0,
       0.0);
   private final VoltageOut m_voltReq = new VoltageOut(0.0);
-
   final SysIdRoutine sysIdRoutine = new SysIdRoutine(
       new SysIdRoutine.Config(Volts.per(Second).of(0.75), Volts.of(4.5), Seconds.of(10),
           (state) -> SignalLogger.writeString("state", state.toString())),
@@ -133,7 +133,7 @@ public class Elevator extends SubsystemBase {
 
     elevatorMotorConfigurator.apply(Configs.elevatorConfig);
     followerConfigurator.apply(Configs.elevatorFollowerConfig);
-    //elevatorMotor.setControl(m_request);
+    // elevatorMotor.setControl(m_request);
     elevatorMotor.getSimState().MotorOrientation = ChassisReference.Clockwise_Positive;
 
     SmartDashboard.putData("elevator.mech2d", Mechanisms.m_mech2d);
@@ -159,7 +159,7 @@ public class Elevator extends SubsystemBase {
     m_elevatorSim.update(0.02);
     elevatorMotorSim.setRawRotorPosition(convertMetersToRotations(m_elevatorSim.getPositionMeters()));
     elevatorMotorSim.setRotorVelocity(
-      convertMetersToRotations(m_elevatorSim.getVelocityMetersPerSecond()));
+        convertMetersToRotations(m_elevatorSim.getVelocityMetersPerSecond()));
 
   }
 
@@ -317,6 +317,9 @@ public class Elevator extends SubsystemBase {
   public Trigger atSetpoint = new Trigger(() -> {
     return MathUtil.isNear(getLinearPositionMeters(), elevatorCurrentTarget.height, 0.02);
   });
+  public Trigger atZeroNeedReset = new Trigger(() -> getLinearPosition().isNear(Inches.of(0), Inches.of(3))
+      && elevatorMotor.getVelocity().getValue().isNear(RPM.of(0), RotationsPerSecond.of(0.005)))
+      .and(atSetpoint.negate()).debounce(0.1);
 
   public Trigger atSetpoint(ElevatorState setpoint) {
     return new Trigger(() -> {

@@ -143,8 +143,10 @@ public class Robot extends TimedRobot {
 
     joystick.povDown().or(joystick.povDownLeft()).or(joystick.povDownRight()).onTrue(intake());
     joystick.trigger().whileTrue(take.runTakeMotor());
-    //joystick.povUp().onTrue(driveTrain.autoAlign(() -> DriveSetpoints.B, Optional.of(joystick::getX), Optional.of(joystick::getX), Optional.of(joystick::getZ)));
-    joystick.povRight().onTrue(Wrist.runSysIdRoutine());
+    joystick.button(11).onTrue(driveTrain.autoAlignChooseSetpoint(true, Optional.of(joystick::getX), Optional.of(joystick::getX), Optional.of(joystick::getZ)).until(driveTrain.atSetpoint));
+    joystick.button(12).onTrue(driveTrain.autoAlignChooseSetpoint(false, Optional.of(joystick::getX), Optional.of(joystick::getX), Optional.of(joystick::getZ)).until(driveTrain.atSetpoint));
+
+   // joystick.povRight().onTrue(Wrist.runSysIdRoutine());
   }
 
   /**
@@ -273,5 +275,9 @@ public class Robot extends TimedRobot {
         take.runTakeMotorReverse(-390).until(take.hasCoral.negate())
 
     );
+  }
+  public static boolean isOnRed() {
+    return DriverStation.getAlliance().orElse(DriverStation.Alliance.Blue)
+        == DriverStation.Alliance.Red;
   }
 }
