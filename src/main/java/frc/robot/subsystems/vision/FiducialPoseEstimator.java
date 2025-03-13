@@ -188,7 +188,7 @@ public class FiducialPoseEstimator {
         var tagPoseOptional = tagLayout.getTagPose(tag.id());
         var gyroYaw = gyroYawGetter.get(estimate.timestamp());
         if (tagPoseOptional.isEmpty() || gyroYaw == null) {
-            System.out.println("isEmpty");
+            //System.out.println("isEmpty");
             solvePnPEstimate(estimate);
             return;
         }
@@ -258,7 +258,7 @@ public class FiducialPoseEstimator {
 
     private void solvePnPEstimate(FiducialPoseEstimate estimate) {
 
-        System.out.println("Running solvepnp");
+        //System.out.println("Running solvepnp");
         // Filter out obviously bad data
         if (Math.abs(estimate.robotPoseEstimate().getZ()) > .025) {
             //System.out.println("Z" + estimate.robotPoseEstimate().getZ());

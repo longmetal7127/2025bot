@@ -14,6 +14,7 @@ import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.wpilibj.DataLogManager;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.PowerDistribution;
 import edu.wpi.first.wpilibj.PowerDistribution.ModuleType;
 import edu.wpi.first.wpilibj.TimedRobot;
@@ -99,9 +100,10 @@ public class Robot extends TimedRobot {
     RobotModeTriggers.autonomous().whileTrue(autoChooser.selectedCommandScheduler());
 
     driveTrain.setDefaultCommand(driveTrain.joystickDrive(joystick::getX, joystick::getY, joystick::getZ, Optional.of(elevator::getSetpointPose)));
-    
-    take.hasCoral.onTrue(led.setGreen());
-    take.hasCoral.onFalse(led.setDefault());
+    System.out.println(DriverStation.isDisabled());
+    RobotModeTriggers.disabled().onTrue(led.setRainbow());
+    take.hasCoral.and(RobotModeTriggers.disabled().negate()).onTrue(led.setGreen());
+    take.hasCoral.and(RobotModeTriggers.disabled().negate()).onFalse(led.setDefault());
 
     Epilogue.bind(this);
   }
