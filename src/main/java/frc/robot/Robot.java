@@ -100,10 +100,10 @@ public class Robot extends TimedRobot {
     RobotModeTriggers.autonomous().whileTrue(autoChooser.selectedCommandScheduler());
 
     driveTrain.setDefaultCommand(driveTrain.joystickDrive(joystick::getX, joystick::getY, joystick::getZ, Optional.of(elevator::getSetpointPose)));
-    System.out.println(DriverStation.isDisabled());
+
     RobotModeTriggers.disabled().onTrue(led.setRainbow());
     take.hasCoral.and(RobotModeTriggers.disabled().negate()).onTrue(led.setGreen());
-    take.hasCoral.and(RobotModeTriggers.disabled().negate()).onFalse(led.setDefault());
+    take.hasCoral.negate().and(RobotModeTriggers.disabled().negate()).onTrue(led.setDefault());
 
     Epilogue.bind(this);
   }

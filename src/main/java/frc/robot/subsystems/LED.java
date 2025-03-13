@@ -32,6 +32,7 @@ public class LED extends SubsystemBase {
     private final LEDPattern m_scrollingRed = m_red.scrollAtAbsoluteSpeed(MetersPerSecond.of(1), kLedSpacing);
     private final LEDPattern m_scrollingBlue = m_blue.scrollAtAbsoluteSpeed(MetersPerSecond.of(1), kLedSpacing);
     private final LEDPattern m_scrollingRainbow = m_rainbow.scrollAtAbsoluteSpeed(MetersPerSecond.of(1), kLedSpacing);
+
     private LEDPattern m_defaultPattern;
     private LEDPattern m_curpattern;
 
@@ -47,9 +48,7 @@ public class LED extends SubsystemBase {
         // Set the data
         m_led.setData(m_ledBuffer);
         m_led.start();
-
-        m_defaultPattern = m_scrollingBlue;
-        m_curpattern = m_defaultPattern;
+        m_curpattern = m_scrollingRainbow;
     }
 
     public Command setGreen() {
@@ -65,7 +64,7 @@ public class LED extends SubsystemBase {
     }
 
     public Command setRainbow() {
-        return runOnce(() -> {
+        return run(() -> {
             m_curpattern = m_scrollingRainbow;
         });
     }
@@ -74,7 +73,8 @@ public class LED extends SubsystemBase {
         if(m_defaultPattern == null && DriverStation.getAlliance().isPresent()) {
             if(DriverStation.getAlliance().get() == Alliance.Red) {
                 m_defaultPattern = m_scrollingRed;
-                System.out.println("here");
+            } else {
+                m_defaultPattern = m_scrollingBlue;
             }
         }
 
