@@ -96,10 +96,10 @@ public class Robot extends TimedRobot {
    */
   public Robot() {
     DataLogManager.start();
-    SignalLogger.start();
     URCL.start();
-    DogLog.setOptions(new DogLogOptions().withCaptureDs(true));
-    DogLog.setPdh(pdh);
+    //SignalLogger.start();
+    //DogLog.setOptions(new DogLogOptions().withCaptureDs(true));
+    //DogLog.setPdh(pdh);
 
 
     autoFactory = new AutoFactory(
@@ -108,7 +108,7 @@ public class Robot extends TimedRobot {
         new AutoController(driveTrain),
         true,
         driveTrain);
-    //configureBindingsSysid();
+   //configureBindingsSysid();
     configureBindings();
     autoChooser = new AutoChooser();
 
@@ -121,7 +121,9 @@ public class Robot extends TimedRobot {
   }
 
   public void configureBindingsSysid() {
-    joystick.trigger().onTrue(Wrist.wristToPosition(WristState.Safe).andThen(elevator.runSysIdRoutine()));
+    //joystick.trigger().onTrue(Wrist.wristToPosition(WristState.Safe).andThen(elevator.runSysIdRoutine()));
+        joystick.trigger().onTrue(Wrist.runSysIdRoutine());
+
   }
 
   public void configureBindings() {
@@ -153,7 +155,7 @@ public class Robot extends TimedRobot {
 
     joystick.povDown().or(joystick.povDownLeft()).or(joystick.povDownRight()).onTrue(intake());
     joystick.trigger().whileTrue(take.runTakeMotor());
-    joystick.povUp().onTrue(driveTrain.autoAlign(() -> DriveSetpoints.B, Optional.of(joystick::getX), Optional.of(joystick::getX), Optional.of(joystick::getZ)));
+    //joystick.povUp().onTrue(driveTrain.autoAlign(() -> DriveSetpoints.B, Optional.of(joystick::getX), Optional.of(joystick::getX), Optional.of(joystick::getZ)));
     joystick.povRight().onTrue(Wrist.runSysIdRoutine());
   }
 

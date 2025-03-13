@@ -65,8 +65,11 @@ public class Elevator extends SubsystemBase {
     Min(0),
     Level1(0),
     Level2(0.25),
-    Level3(0.70),
-    Level4(1.35),
+    Processor(0.25),
+    Level3(0.68),
+    Level4(1.33),
+    Algae1(0.653),
+    Algae2(1.045),
     SourcePickup(0.2),
     Handoff(0);
 

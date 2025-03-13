@@ -51,17 +51,16 @@ public class Superstructure {
       WristConfig.absoluteEncoder.inverted(true).zeroCentered(false);
       // elevatorConfig.encoder.positionConversionFactor(0.048676).velocityConversionFactor(0.048676);
 
-      elevatorConfig.Commutation.
-        withMotorArrangement(MotorArrangementValue.NEO_JST);
+      elevatorConfig.Commutation.withMotorArrangement(MotorArrangementValue.NEO_JST);
       elevatorConfig.CurrentLimits
           .withStatorCurrentLimit(Amps.of(120))
           .withStatorCurrentLimitEnable(true);
       elevatorConfig.MotorOutput
           .withNeutralMode(NeutralModeValue.Brake)
-          .withInverted(InvertedValue.Clockwise_Positive);
+          .withInverted(InvertedValue.CounterClockwise_Positive);
 
       elevatorConfig.Slot0
-            .withGravityType(GravityTypeValue.Elevator_Static)
+          .withGravityType(GravityTypeValue.Elevator_Static)
           .withKV(ElevatorConstants.kElevatorkV)
           .withKA(ElevatorConstants.kElevatorkA)
           .withKS(ElevatorConstants.kElevatorkS)
@@ -73,14 +72,12 @@ public class Superstructure {
 
           .withStaticFeedforwardSign(StaticFeedforwardSignValue.UseVelocitySign);
 
-
       elevatorConfig.MotionMagic
           .withMotionMagicAcceleration(ElevatorConstants.kElevatorMaxAcceleration)
-          .withMotionMagicCruiseVelocity(ElevatorConstants.kElevatorMaxVelocity);
-          //.withMotionMagicJerk(1600);
-    elevatorFollowerConfig.Commutation.
-          withMotorArrangement(MotorArrangementValue.NEO_JST);
-  
+          .withMotionMagicCruiseVelocity(ElevatorConstants.kElevatorMaxVelocity)
+          .withMotionMagicJerk(1400);
+      elevatorFollowerConfig.Commutation.withMotorArrangement(MotorArrangementValue.NEO_JST);
+
       elevatorFollowerConfig.CurrentLimits
           .withStatorCurrentLimit(Amps.of(120))
           .withStatorCurrentLimitEnable(true);
@@ -97,15 +94,15 @@ public class Superstructure {
     public static final double kElevatorkGStage1 = 0.64125;
     public static final double kElevatorkGStage2 = 0.9465;
 
-    public static final double kElevatorkS = 0.60007;
-    public static final double kElevatorkV = 0.113;
+    public static final double kElevatorkS = 0.34162;
+    public static final double kElevatorkV = 0.12032;
     public static final double kElevatorkA = 0;
 
-    public static final double kElevatorkP = 4;
+    public static final double kElevatorkP = 3.5;
     public static final double kElevatorkI = 0;
-    public static final double kElevatorkD = 0.04;
+    public static final double kElevatorkD = 0.06;
 
-    public static final double kElevatorMaxVelocity = Rotations.of(65)
+    public static final double kElevatorMaxVelocity = Rotations.of(75)
         .per(Second)
         .in(RotationsPerSecond);
     public static final double kElevatorMaxAcceleration = Rotations.of(160)
@@ -118,12 +115,12 @@ public class Superstructure {
 
     public static final double kWristkG = 0.39721;
     public static final double kWristkS = 0.45126;
-    public static final double kWristkV = 1.0745;
+    public static final double kWristkV = 2.645;
     public static final double kWristkA = 0.61657;
 
-    public static final double kWristkP = 31;
+    public static final double kWristkP = 20;
     public static final double kWristkI = 0;
-    public static final double kWristkD = 0;
+    public static final double kWristkD = 1;
 
     public static final double kWristMaxVelocityRPM = 20;
     public static final double kWristMaxAccelerationRPMperSecond = 10;
@@ -136,8 +133,7 @@ public class Superstructure {
 
     public static final double kElevatorGearing = 5;
     public static final double kCarriageMass = 6.80388555;
-    public static final double kElevatorDrumRadius = (Units.inchesToMeters(2.808000) + Units.inchesToMeters(0.125) * 2)
-        / 2.0; // m
+    public static final double kElevatorDrumRadius = (Units.inchesToMeters(2.1875)) / 2.0;
     public static final double kMinElevatorCarriageHeightMeters = 0.2286; // m
     public static final double kMinElevatorStage1HeightMeters = 0.9652; // m
     public static final double kMaxElevatorCarriageHeightMeters = 0.9144; // m
@@ -149,7 +145,7 @@ public class Superstructure {
 
     public static final Distance kWristLength = Meters.of(0.45076397);
     public static final Mass kWristMass = Pounds.of(7.5258052);
-    public static final double kWristReduction = 32; // TODO: double check
+    public static final double kWristReduction = 32; 
     public static final double kMinAngleRads = -8 * Math.PI;
     public static final double kMaxAngleRads = 8 * Math.PI;
   }
