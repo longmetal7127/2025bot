@@ -2,8 +2,6 @@ package frc.robot.constants;
 
 import static edu.wpi.first.units.Units.Inches;
 import static edu.wpi.first.units.Units.Meters;
-import static edu.wpi.first.units.Units.Millimeters;
-
 import com.revrobotics.spark.config.ClosedLoopConfig.FeedbackSensor;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.config.SparkMaxConfig;
@@ -149,9 +147,9 @@ public class Swerve {
 
     public static final class kTranslation {
 
-      public static final double kP = 3.4;
+      public static final double kP = 4.8;
       public static final double kI = 0.0;
-      public static final double kD = 0.0;
+      public static final double kD = 0.2;
     }
 
     public static final class kRotation {

@@ -40,7 +40,6 @@ import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
 import frc.robot.Robot;
 import frc.robot.constants.Superstructure.WristConstants;
-import frc.robot.subsystems.superstructure.Wrist.WristState;
 import frc.robot.constants.Superstructure.CANIds;
 import frc.robot.constants.Superstructure.Configs;
 import frc.robot.constants.Superstructure.Mechanisms;
@@ -99,7 +98,7 @@ public class Wrist extends SubsystemBase {
       PhysicalRobotConstants.kWristLength.in(Meters),
       PhysicalRobotConstants.kMinAngleRads,
       PhysicalRobotConstants.kMaxAngleRads,
-      true,
+      false,
       PhysicalRobotConstants.kMinAngleRads,
       0.0,
       0.0);
@@ -181,8 +180,6 @@ public class Wrist extends SubsystemBase {
   }
 
   private void moveToSetpoint() {
-    if (false)
-      return;
     double pidOutput = m_wristPIDController.calculate(
         getArmActualPosition(),
         Units.degreesToRotations(wristCurrentTarget.angle));

@@ -4,6 +4,7 @@
 
 package frc.robot.constants;
 
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.util.Units;
 import frc.robot.subsystems.vision.FiducialPoseEstimator;
@@ -35,8 +36,14 @@ public final class Constants {
   public static final double FIELD_WIDTH_METERS = FiducialPoseEstimator.tagLayout.getFieldWidth();
   public static final Translation2d FIELD_CENTER = new Translation2d(FIELD_LENGTH_METERS / 2, FIELD_WIDTH_METERS / 2);
 
-  public static final double FRAME_WIDTH_METERS = Units.inchesToMeters(28);
-  public static final double FRAME_LENGTH_METERS = Units.inchesToMeters(28);
+  public static final double FRAME_WIDTH_METERS = Units.inchesToMeters(29);
+  public static final double FRAME_LENGTH_METERS = Units.inchesToMeters(29);
   public static final double BUMPER_THICKNESS_METERS = Units.inchesToMeters(4.25);
+
+  public static double tag18X = FiducialPoseEstimator.tagLayout.getTagPose(18).get().getX();
+  public static double tag21X = FiducialPoseEstimator.tagLayout.getTagPose(21).get().getX();
+  public static Translation2d BLUE_REEF = new Translation2d((tag18X + tag21X) / 2, Constants.FIELD_WIDTH_METERS / 2);
+  public static Translation2d RED_REEF = BLUE_REEF.rotateAround(FIELD_CENTER, Rotation2d.k180deg);
+
 
 }

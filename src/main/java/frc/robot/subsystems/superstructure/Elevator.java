@@ -7,40 +7,22 @@ package frc.robot.subsystems.superstructure;
 import static edu.wpi.first.units.Units.*;
 
 import com.ctre.phoenix6.SignalLogger;
-import com.ctre.phoenix6.configs.TalonFXConfiguration;
-import com.ctre.phoenix6.configs.TalonFXSConfiguration;
 import com.ctre.phoenix6.controls.Follower;
 import com.ctre.phoenix6.controls.MotionMagicVoltage;
 import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.TalonFXS;
 import com.ctre.phoenix6.sim.ChassisReference;
-import com.ctre.phoenix6.sim.TalonFXSSimState;
-import com.revrobotics.RelativeEncoder;
-import com.revrobotics.sim.SparkMaxSim;
-import com.revrobotics.spark.SparkBase.PersistMode;
-import com.revrobotics.spark.SparkBase.ResetMode;
-import com.revrobotics.spark.SparkLowLevel.MotorType;
-import com.revrobotics.spark.SparkMax;
 import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.math.MathUtil;
-import edu.wpi.first.math.controller.ElevatorFeedforward;
-import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.system.plant.DCMotor;
-import edu.wpi.first.math.trajectory.TrapezoidProfile.Constraints;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.units.measure.LinearVelocity;
-import edu.wpi.first.units.measure.MutAngle;
-import edu.wpi.first.units.measure.MutDistance;
-import edu.wpi.first.units.measure.MutLinearVelocity;
-import edu.wpi.first.units.measure.MutVoltage;
 import edu.wpi.first.wpilibj.Notifier;
-import edu.wpi.first.wpilibj.RobotController;
-import edu.wpi.first.wpilibj.simulation.DCMotorSim;
 import edu.wpi.first.wpilibj.simulation.ElevatorSim;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.util.Color8Bit;
@@ -53,10 +35,8 @@ import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
 import frc.robot.Robot;
 import frc.robot.constants.Superstructure.CANIds;
 import frc.robot.constants.Superstructure.Configs;
-import frc.robot.constants.Superstructure.ElevatorConstants;
 import frc.robot.constants.Superstructure.Mechanisms;
 import frc.robot.constants.Superstructure.PhysicalRobotConstants;
-import frc.robot.subsystems.superstructure.Elevator.ElevatorState;
 import frc.robot.util.Tracer;
 
 @Logged
@@ -87,7 +67,7 @@ public class Elevator extends SubsystemBase {
   private TalonFXS elevatorFollower = new TalonFXS(
       CANIds.kElevatorMotorFollowerCanId);
 
-  private ElevatorState elevatorCurrentTarget = ElevatorState.Min;
+  private ElevatorState elevatorCurrentTarget = ElevatorState.Handoff;
   private Notifier simNotifier = null;
 
   private DCMotor elevatorMotorModel = DCMotor.getNEO(2);
@@ -116,6 +96,15 @@ public class Elevator extends SubsystemBase {
       Inches.of(5)));
   public final Trigger atMax = new Trigger(() -> getLinearPosition().isNear(Meters.of(0.668),
       Inches.of(3)));
+  public Trigger atSetpoint = new Trigger(() -> {
+    return MathUtil.isNear(getLinearPositionMeters(), elevatorCurrentTarget.height, 0.02);
+  });
+
+  public Trigger atZeroNeedReset = new Trigger(() -> getLinearPosition().isNear(
+      Inches.of(0), Inches.of(3))
+      && elevatorMotor.getVelocity().getValue().isNear(RPM.of(0), RotationsPerSecond.of(0.005))
+      && (elevatorMotor.getTorqueCurrent().getValueAsDouble() < -20) && this.elevatorCurrentTarget == ElevatorState.Handoff)
+      .debounce(0.5);
 
   public Elevator() {
     /*
@@ -314,16 +303,15 @@ public class Elevator extends SubsystemBase {
     return Commands.sequence(setSetpointCommand(state), Commands.waitUntil(atSetpoint));
   }
 
-  public Trigger atSetpoint = new Trigger(() -> {
-    return MathUtil.isNear(getLinearPositionMeters(), elevatorCurrentTarget.height, 0.02);
-  });
-  public Trigger atZeroNeedReset = new Trigger(() -> getLinearPosition().isNear(Inches.of(0), Inches.of(3))
-      && elevatorMotor.getVelocity().getValue().isNear(RPM.of(0), RotationsPerSecond.of(0.005)))
-      .and(atSetpoint.negate()).debounce(0.1);
-
   public Trigger atSetpoint(ElevatorState setpoint) {
     return new Trigger(() -> {
       return MathUtil.isNear(getLinearPositionMeters(), setpoint.height, 0.02);
+    });
+  }
+
+  public Command zero() {
+    return runOnce(() -> {
+      elevatorMotor.setPosition(0);
     });
   }
 

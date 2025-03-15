@@ -10,8 +10,6 @@ import choreo.auto.AutoRoutine;
 import choreo.auto.AutoTrajectory;
 import edu.wpi.first.epilogue.Epilogue;
 import edu.wpi.first.epilogue.Logged;
-import edu.wpi.first.math.MathUtil;
-import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -22,12 +20,9 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
-import edu.wpi.first.wpilibj2.command.RunCommand;
-import edu.wpi.first.wpilibj2.command.Command.InterruptionBehavior;
 import edu.wpi.first.wpilibj2.command.button.CommandJoystick;
 import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
 import frc.robot.constants.Constants;
-import frc.robot.constants.Constants.OperatorConstants;
 import frc.robot.constants.Swerve.DriveSetpoints;
 import frc.robot.subsystems.DriveTrain;
 import frc.robot.subsystems.LED;
@@ -38,8 +33,6 @@ import frc.robot.subsystems.superstructure.Wrist.WristState;
 import frc.robot.subsystems.superstructure.Elevator;
 import frc.robot.util.Tracer;
 
-import dev.doglog.DogLog;
-import dev.doglog.DogLogOptions;
 
 import java.util.Optional;
 
@@ -80,10 +73,9 @@ public class Robot extends TimedRobot {
   public Robot() {
     DataLogManager.start();
     URCL.start();
-    //SignalLogger.start();
-    //DogLog.setOptions(new DogLogOptions().withCaptureDs(true));
-    //DogLog.setPdh(pdh);
-
+    SignalLogger.start();
+    // DogLog.setOptions(new DogLogOptions().withCaptureDs(true));
+    // DogLog.setPdh(pdh);
 
     autoFactory = new AutoFactory(
         driveTrain::getPose,
@@ -91,17 +83,22 @@ public class Robot extends TimedRobot {
         new AutoController(driveTrain),
         true,
         driveTrain);
-   //configureBindingsSysid();
+    // configureBindingsSysid();
     configureBindings();
     autoChooser = new AutoChooser();
 
-    autoChooser.addRoutine("testauto", this::auto);
-    SmartDashboard.putData("hiii", autoChooser);
+    autoChooser.addCmd("One piece", this::onePiece);
+    autoChooser.addCmd("Three piece Left", this::threePieceLeft);
+    autoChooser.addCmd("Three piece Right", this::threePieceRight);
+
+
+    SmartDashboard.putData("Auto Chooser", autoChooser);
     RobotModeTriggers.autonomous().whileTrue(autoChooser.selectedCommandScheduler());
 
-    driveTrain.setDefaultCommand(driveTrain.joystickDrive(joystick::getX, joystick::getY, joystick::getZ, Optional.of(elevator::getSetpointPose)));
+    driveTrain.setDefaultCommand(driveTrain.joystickDrive(joystick::getX, joystick::getY, joystick::getZ,
+        Optional.of(elevator::getSetpointPose)));
 
-    RobotModeTriggers.disabled().onTrue(led.setRainbow());
+    RobotModeTriggers.disabled().onTrue(led.setRainbow().ignoringDisable(true));
     take.hasCoral.and(RobotModeTriggers.disabled().negate()).onTrue(led.setGreen());
     take.hasCoral.negate().and(RobotModeTriggers.disabled().negate()).onTrue(led.setDefault());
 
@@ -109,8 +106,8 @@ public class Robot extends TimedRobot {
   }
 
   public void configureBindingsSysid() {
-    //joystick.trigger().onTrue(Wrist.wristToPosition(WristState.Safe).andThen(elevator.runSysIdRoutine()));
-        joystick.trigger().onTrue(Wrist.runSysIdRoutine());
+    // joystick.trigger().onTrue(Wrist.wristToPosition(WristState.Safe).andThen(elevator.runSysIdRoutine()));
+    joystick.trigger().onTrue(Wrist.runSysIdRoutine());
 
   }
 
@@ -143,10 +140,30 @@ public class Robot extends TimedRobot {
 
     joystick.povDown().or(joystick.povDownLeft()).or(joystick.povDownRight()).onTrue(intake());
     joystick.trigger().whileTrue(take.runTakeMotor());
-    joystick.button(11).onTrue(driveTrain.autoAlignChooseSetpoint(true, Optional.of(joystick::getX), Optional.of(joystick::getX), Optional.of(joystick::getZ)).until(driveTrain.atSetpoint));
-    joystick.button(12).onTrue(driveTrain.autoAlignChooseSetpoint(false, Optional.of(joystick::getX), Optional.of(joystick::getX), Optional.of(joystick::getZ)).until(driveTrain.atSetpoint));
+    joystick.button(11).onTrue(
+        driveTrain.autoAlignChooseSetpoint(true,
+            Optional.of(joystick::getX),
+            Optional.of(joystick::getX),
+            Optional.of(joystick::getZ)).withDeadline(autoAlignEnd()));
+    joystick.button(12).onTrue(
+        driveTrain.autoAlignChooseSetpoint(false,
+            Optional.of(joystick::getX),
+            Optional.of(joystick::getX),
+            Optional.of(joystick::getZ)).withDeadline(autoAlignEnd()));
 
-   // joystick.povRight().onTrue(Wrist.runSysIdRoutine());
+    // joystick.povRight().onTrue(Wrist.runSysIdRoutine());
+    elevator.atZeroNeedReset.onTrue(elevator.zero());
+  }
+
+  public Command autoAlignEnd() {
+    return Commands.race(
+      Commands.waitUntil(driveTrain.atSetpoint), 
+      Commands.sequence(
+        Commands.waitUntil(elevator.atSetpoint(ElevatorState.Handoff).negate()),
+        Commands.waitUntil(elevator.atSetpoint(ElevatorState.Handoff))
+      ), 
+      Commands.waitUntil(joystick.button(10))
+    );
   }
 
   /**
@@ -170,6 +187,63 @@ public class Robot extends TimedRobot {
     // block in order for anything in the Command-based framework to work.
     Tracer.traceFunc("CommandScheduler", scheduler::run);
 
+  }
+
+  public Command onePiece() {
+    return driveTrain
+        .autoAlign(() -> DriveSetpoints.B, Optional.empty(), Optional.empty(), Optional.empty())
+        .until(driveTrain.atSetpoint)
+        .andThen(Wrist.wristToPosition(WristState.Safe))
+        .andThen(elevator.elevatorToPosition(ElevatorState.Level4))
+        .andThen(Wrist.wristToPosition(WristState.Level4))
+        .andThen(shootNote());
+  }
+
+  public Command threePieceLeft() {
+    return reefCycle(DriveSetpoints.E, ElevatorState.Level4, WristState.Level4)
+        .andThen(sourceIntake(false))
+        .andThen(reefCycle(DriveSetpoints.F, ElevatorState.Level4, WristState.Level4))
+        .andThen(sourceIntake(false))
+        .andThen(reefCycle(DriveSetpoints.B, ElevatorState.Level4, WristState.Level4))
+        .andThen(sourceIntake(false));
+  }
+
+  public Command threePieceRight() {
+    return reefCycle(DriveSetpoints.E, ElevatorState.Level4, WristState.Level4)
+        .andThen(sourceIntake(false))
+        .andThen(reefCycle(DriveSetpoints.F, ElevatorState.Level4, WristState.Level4))
+        .andThen(sourceIntake(false))
+        .andThen(reefCycle(DriveSetpoints.B, ElevatorState.Level4, WristState.Level4))
+        .andThen(sourceIntake(false));
+  }
+
+  public Command shootNote() {
+    return take.runTakeMotor().withDeadline(
+        Commands.sequence(
+            Commands.waitUntil(take.hasCoral),
+            Commands.waitUntil(take.hasCoral.negate()),
+            Commands.waitSeconds(0.2)));
+  };
+
+  public Command reefCycle(DriveSetpoints driveSetpoint, ElevatorState elevatorSetpoint, WristState wristState) {
+    return driveTrain.autoAlign(
+        () -> driveSetpoint,
+        Optional.empty(),
+        Optional.empty(),
+        Optional.empty()).until(driveTrain.atSetpoint)
+        .andThen(Wrist.wristToPosition(WristState.Safe))
+        .andThen(elevator.elevatorToPosition(elevatorSetpoint))
+        .andThen(shootNote())
+        .andThen(Wrist.wristToPosition(WristState.Safe)).andThen(
+            elevator.elevatorToPosition(ElevatorState.Handoff))
+        .andThen(Wrist.setSetpointCommand(WristState.Handoff)); // make sure to doublecheck it could be sketch but i
+                                                                // think it should be fineee
+  }
+
+  public Command sourceIntake(boolean left) {
+    return driveTrain.autoAlign(() -> left ? DriveSetpoints.LEFT_HP : DriveSetpoints.RIGHT_HP, Optional.empty(),
+        Optional.empty(), Optional.empty()).until(driveTrain.atSetpoint)
+        .andThen(intake());
   }
 
   /** This function is called once each time the robot enters Disabled mode. */
@@ -276,8 +350,8 @@ public class Robot extends TimedRobot {
 
     );
   }
+
   public static boolean isOnRed() {
-    return DriverStation.getAlliance().orElse(DriverStation.Alliance.Blue)
-        == DriverStation.Alliance.Red;
+    return DriverStation.getAlliance().orElse(DriverStation.Alliance.Blue) == DriverStation.Alliance.Red;
   }
 }

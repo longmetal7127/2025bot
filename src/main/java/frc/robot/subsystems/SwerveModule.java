@@ -24,13 +24,10 @@ import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.system.plant.LinearSystemId;
 import edu.wpi.first.math.util.Units;
-import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.simulation.DCMotorSim;
-import frc.robot.constants.Swerve.DriveConstants;
 import frc.robot.constants.Swerve.ModuleConfigs;
 import frc.robot.constants.Swerve.ModuleConstants;
-import frc.robot.constants.Swerve.AutoConstants.MotorConstants;
 
 @Logged
 public class SwerveModule {
@@ -57,7 +54,7 @@ public class SwerveModule {
 
     private final DCMotorSim driveMotorSim = new DCMotorSim(
             LinearSystemId.createDCMotorSystem(DCMotor.getNeoVortex(1),
-                    Units.lbsToKilograms(105) * Math.pow(ModuleConstants.kWheelDiameterMeters / 2, 2) / 4,
+                    Units.lbsToKilograms(115) * Math.pow(ModuleConstants.kWheelDiameterMeters / 2, 2) / 4,
                     ModuleConstants.kDrivingMotorReduction),
             DCMotor.getNeoVortex(1));
 

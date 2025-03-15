@@ -2,13 +2,9 @@ package frc.robot.subsystems.superstructure;
 
 import static edu.wpi.first.units.Units.*;
 
-import java.util.Optional;
-
-import com.revrobotics.spark.SparkBase.ControlType;
 import com.revrobotics.spark.SparkBase.PersistMode;
 import com.revrobotics.spark.SparkBase.ResetMode;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
-import com.revrobotics.spark.SparkClosedLoopController;
 import com.revrobotics.spark.SparkMax;
 
 import edu.wpi.first.epilogue.Logged;
@@ -35,7 +31,6 @@ public class Take extends SubsystemBase {
     private SparkMax takeMotor = new SparkMax(Superstructure.CANIds.kTakeMotorCanId, MotorType.kBrushless);
     public Trigger hasCoral = new Trigger(takeMotor.getForwardLimitSwitch()::isPressed);
     private LinearFilter coralFilter = LinearFilter.highPass(0.1, 0.02);
-    private LinearFilter movingAvg = LinearFilter.movingAverage(5);
     public Trigger justGotCoral = new Trigger(() -> {
         return coralFilter.calculate((takeMotor.getOutputCurrent())) > 1;
     }).debounce(0.04);

@@ -12,6 +12,9 @@ import edu.wpi.first.networktables.NetworkTableListener;
 import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import frc.robot.constants.Constants;
+import frc.robot.subsystems.vision.FiducialPoseEstimator;
+
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
@@ -211,17 +214,15 @@ public class RepulsorFieldPlanner {
 
   public static final List<Obstacle> FIELD_OBSTACLES =
       List.of(
-          new TeardropObstacle(new Translation2d(4.49, 4), 1.2, 2.2, 1.03, 3, 2),
-          new TeardropObstacle(new Translation2d(13.08, 4), 1.2, 2.2, 1.03, 3, 2));
+          new TeardropObstacle(Constants.BLUE_REEF, 1, 2.5, .83, 3, 2),
+          new TeardropObstacle(Constants.RED_REEF, 1, 2.5, .83, 3, 2));
 
-  static final double FIELD_LENGTH = 16.42;
-  static final double FIELD_WIDTH = 8.16;
   public static final List<Obstacle> WALLS =
       List.of(
           new HorizontalObstacle(0.0, 2, true),
-          new HorizontalObstacle(FIELD_WIDTH, 1.4, false),
+          new HorizontalObstacle(Constants.FIELD_WIDTH_METERS, 1.4, false),
           new VerticalObstacle(0.0, 2, true),
-          new VerticalObstacle(FIELD_LENGTH, 1.4, false));
+          new VerticalObstacle(Constants.FIELD_LENGTH_METERS, 1.4, false));
 
   private List<Obstacle> fixedObstacles = new ArrayList<>();
   private Optional<Translation2d> goalOpt = Optional.empty();
@@ -293,7 +294,7 @@ public class RepulsorFieldPlanner {
     for (int x = 0; x <= ARROWS_X; x++) {
       for (int y = 0; y <= ARROWS_Y; y++) {
         var translation =
-            new Translation2d(x * FIELD_LENGTH / ARROWS_X, y * FIELD_WIDTH / ARROWS_Y);
+            new Translation2d(x * Constants.FIELD_LENGTH_METERS / ARROWS_X, y * Constants.FIELD_WIDTH_METERS / ARROWS_Y);
         var force = Force.kZero;
         if (useObstaclesInArrows)
           force = force.plus(getObstacleForce(translation, goal().getTranslation()));

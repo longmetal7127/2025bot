@@ -8,8 +8,6 @@ import java.util.Optional;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 
-import org.opencv.core.Mat;
-
 import com.studica.frc.AHRS;
 
 import choreo.trajectory.SwerveSample;
@@ -18,16 +16,13 @@ import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.hal.SimDouble;
 import edu.wpi.first.hal.simulation.SimDeviceDataJNI;
 import edu.wpi.first.math.MathUtil;
-import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.controller.PIDController;
-import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.math.geometry.Twist2d;
 import edu.wpi.first.math.interpolation.TimeInterpolatableBuffer;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
@@ -37,29 +32,22 @@ import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.RobotController;
-import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.Commands;
-import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.Robot;
 import frc.robot.constants.Constants.OperatorConstants;
 import frc.robot.constants.Swerve;
-import frc.robot.constants.Vision;
 import frc.robot.constants.Swerve.AutoConstants;
 import frc.robot.constants.Swerve.CANIds;
 import frc.robot.constants.Swerve.DriveConstants;
 import frc.robot.constants.Swerve.DriveSetpoints;
-import frc.robot.constants.Swerve.ModuleConstants;
-import frc.robot.constants.Vision.CameraOne;
 import frc.robot.subsystems.superstructure.Elevator.ElevatorState;
 import frc.robot.subsystems.vision.FiducialPoseEstimator;
 import frc.robot.subsystems.vision.SwervePoseEstimator;
 import frc.robot.subsystems.vision.FiducialPoseEstimator.GyroYawGetter;
-import frc.robot.subsystems.vision.FiducialPoseEstimator.PoseEstimate;
 import frc.robot.util.RepulsorFieldPlanner;
 import frc.robot.util.Tracer;
 
@@ -99,6 +87,7 @@ public class DriveTrain extends SubsystemBase {
   // like in the docs
   private SimDouble angle = new SimDouble(
       SimDeviceDataJNI.getSimValueHandle(dev, "Yaw"));
+  private ChassisSpeeds m_speedsRequested = new ChassisSpeeds();
 
   // Odometry class for tracking robot pose
   SwerveDriveOdometry m_odometry = new SwerveDriveOdometry(
@@ -181,9 +170,10 @@ public class DriveTrain extends SubsystemBase {
     };
 
   }
+
   private double aErr() {
     return Math.abs(
-            getPose().getRotation().getDegrees() - setpoint.getPose().getRotation().getDegrees())
+        getPose().getRotation().getDegrees() - setpoint.getPose().getRotation().getDegrees())
         % 360;
   }
 
@@ -211,7 +201,8 @@ public class DriveTrain extends SubsystemBase {
       Tracer.endTrace();
       Tracer.startTrace("angleSet");
 
-      angle.set(-m_odometry.getPoseMeters().getRotation().getDegrees());
+      double dTheta = (m_speedsRequested.omegaRadiansPerSecond * dt) * 180 / Math.PI;
+      angle.set(angle.get() - dTheta);
       Tracer.endTrace();
 
     }
@@ -235,6 +226,7 @@ public class DriveTrain extends SubsystemBase {
         }
       }
     }
+
     Tracer.startTrace("buh");
     poseEstimator.updateWithTime(
         RobotController.getTime() / 1e6,
@@ -317,28 +309,7 @@ public class DriveTrain extends SubsystemBase {
                 rotDelivered,
                 m_gyro.getRotation2d())
             : new ChassisSpeeds(xSpeedDelivered, ySpeedDelivered, rotDelivered));
-    SwerveDriveKinematics.desaturateWheelSpeeds(
-        swerveModuleStates,
-        DriveConstants.kMaxSpeedMetersPerSecond);
-
-    m_frontLeft.setDesiredState(swerveModuleStates[0]);
-    m_frontRight.setDesiredState(swerveModuleStates[1]);
-    m_rearLeft.setDesiredState(swerveModuleStates[2]);
-    m_rearRight.setDesiredState(swerveModuleStates[3]);
-  }
-
-  /**
-   * Sets the wheels into an X formation to prevent movement.
-   */
-  public void setX() {
-    m_frontLeft.setDesiredState(
-        new SwerveModuleState(0, Rotation2d.fromDegrees(45)));
-    m_frontRight.setDesiredState(
-        new SwerveModuleState(0, Rotation2d.fromDegrees(-45)));
-    m_rearLeft.setDesiredState(
-        new SwerveModuleState(0, Rotation2d.fromDegrees(-45)));
-    m_rearRight.setDesiredState(
-        new SwerveModuleState(0, Rotation2d.fromDegrees(45)));
+    setModuleStates(swerveModuleStates);
   }
 
   /**
@@ -354,6 +325,8 @@ public class DriveTrain extends SubsystemBase {
     m_frontRight.setDesiredState(desiredStates[1]);
     m_rearLeft.setDesiredState(desiredStates[2]);
     m_rearRight.setDesiredState(desiredStates[3]);
+    m_speedsRequested = DriveConstants.kDriveKinematics.toChassisSpeeds(desiredStates);
+
   }
 
   /** Resets the drive encoders to currently read a position of 0. */
@@ -517,8 +490,10 @@ public class DriveTrain extends SubsystemBase {
             var robotToBranchVector = branchLocation.minus(poseEstimator.getEstimatedPosition().getTranslation());
 
             var branchDistanceScore = robotToBranchVector.getNorm();
+            var xControl = xSupplier.get().getAsDouble();
+            var yControl = ySupplier.get().getAsDouble();
+            var driverControlVector = new Translation2d(xControl, yControl);
 
-            var driverControlVector = new Translation2d(xSupplier.get().getAsDouble(), ySupplier.get().getAsDouble());
             if (Robot.isOnRed()) {
               driverControlVector = new Translation2d(-driverControlVector.getX(), -driverControlVector.getY());
             }
@@ -527,19 +502,16 @@ public class DriveTrain extends SubsystemBase {
             if (driverControlVector.getNorm() < .1) {
               driverInputScore = 0;
             } else {
-              var robotToBranchAngle = robotToBranchVector.getAngle();
-              var driverControlAngle = driverControlVector.getAngle();
-
-              driverInputScore = driverControlAngle.minus(robotToBranchAngle).getCos() * 2;
+              driverInputScore = dot(normalize(branchLocation), normalize(driverControlVector)) * 2.8;
             }
 
             DogLog.log(
-                "Swerve/Reef Align/Branch " + i + "/Distance score", branchDistanceScore);
+                "driveTrain/Reef Align/Branch " + i + "/Distance score", branchDistanceScore);
             DogLog.log(
-                "Swerve/Reef Align/Branch " + i + "/Driver input score", driverInputScore);
+                "driveTrain/Reef Align/Branch " + i + "/Driver input score", driverInputScore);
             double branchScore = branchDistanceScore - driverInputScore;
             DogLog.log(
-                "Swerve/Reef Align/Branch " + i + "/Overall score", branchScore);
+                "driveTrain/Reef Align/Branch " + i + "/Overall score", branchScore);
 
             if (branchScore < bestScore) {
               bestBranch = i;
@@ -567,13 +539,13 @@ public class DriveTrain extends SubsystemBase {
         if (Math.abs(xSupplier.get().getAsDouble()) > 0.05
             || Math.abs(ySupplier.get().getAsDouble()) > 0.05
             || Math.abs(omegaSupplier.get().getAsDouble()) > 0.05) {
-          joystickDrive(xSupplier.get(), ySupplier.get(), omegaSupplier.get(), null).execute();
+          joystickDrive(xSupplier.get(), ySupplier.get(), omegaSupplier.get(), Optional.empty()).execute();
           return;
         }
       }
 
       this.setpoint = _setpoint.get();
-      DogLog.log("Drive/Setpoint", this.setpoint.getPose());
+      DogLog.log("driveTrain/Setpoint", this.setpoint.getPose());
 
       repulsorFieldPlanner.setGoal(this.setpoint.getPose().getTranslation());
 
@@ -626,18 +598,14 @@ public class DriveTrain extends SubsystemBase {
     setChassisSpeeds(out);
 
   }
-}
 
-/*
- * public Pose2d[] getSwerveModulePoses(Pose2d robotPose) {
- * Pose2d[] poseArr = new Pose2d[swerveDriveConfiguration.moduleCount];
- * List<Pose2d> poses = new ArrayList<>();
- * for (SwerveModule module : swerveModules) {
- * poses.add(
- * robotPose.plus(
- * new Transform2d(module.configuration.moduleLocation,
- * module.getState().angle)));
- * }
- * return poses.toArray(poseArr);
- * }
- */
+  public static double dot(final Translation2d a, final Translation2d b) {
+    return a.getX() * b.getX() + a.getY() * b.getY();
+  }
+
+  public static Translation2d normalize(final Translation2d translation) {
+    var magnitude = translation.getNorm();
+    return new Translation2d(translation.getX() / magnitude, translation.getY() / magnitude);
+  }
+
+}

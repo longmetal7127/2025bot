@@ -20,8 +20,6 @@ import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.util.struct.Struct;
 import frc.robot.constants.Constants;
-import frc.robot.constants.Vision;
-import frc.robot.constants.Vision.CameraConstants;
 
 public class FiducialPoseEstimator {
     public static final AprilTagFieldLayout tagLayout = AprilTagFieldLayout
