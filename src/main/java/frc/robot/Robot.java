@@ -33,8 +33,8 @@ import frc.robot.subsystems.superstructure.Wrist.WristState;
 import frc.robot.subsystems.superstructure.Elevator;
 import frc.robot.util.Tracer;
 
-
 import java.util.Optional;
+import java.util.function.Supplier;
 
 import org.littletonrobotics.urcl.URCL;
 
@@ -87,16 +87,28 @@ public class Robot extends TimedRobot {
     configureBindings();
     autoChooser = new AutoChooser();
 
-    autoChooser.addCmd("One piece", this::onePiece);
+    autoChooser.addCmd("One piece A", this.onePiece(DriveSetpoints.A));
+    autoChooser.addCmd("One piece B", this.onePiece(DriveSetpoints.B));
+    autoChooser.addCmd("One piece C", this.onePiece(DriveSetpoints.C));
+    autoChooser.addCmd("One piece D", this.onePiece(DriveSetpoints.D));
+    autoChooser.addCmd("One piece E", this.onePiece(DriveSetpoints.E));
+    autoChooser.addCmd("One piece F", this.onePiece(DriveSetpoints.F));
+    autoChooser.addCmd("One piece G", this.onePiece(DriveSetpoints.G));
+    autoChooser.addCmd("One piece H", this.onePiece(DriveSetpoints.H));
+    autoChooser.addCmd("One piece I", this.onePiece(DriveSetpoints.I));
+    autoChooser.addCmd("One piece J", this.onePiece(DriveSetpoints.J));
+    autoChooser.addCmd("One piece K", this.onePiece(DriveSetpoints.K));
+    autoChooser.addCmd("One piece L", this.onePiece(DriveSetpoints.L));
+
     autoChooser.addCmd("Three piece Left", this::threePieceLeft);
     autoChooser.addCmd("Three piece Right", this::threePieceRight);
-
+    autoChooser.addCmd("test", this::test);
 
     SmartDashboard.putData("Auto Chooser", autoChooser);
     RobotModeTriggers.autonomous().whileTrue(autoChooser.selectedCommandScheduler());
 
     driveTrain.setDefaultCommand(driveTrain.joystickDrive(joystick::getX, joystick::getY, joystick::getZ,
-        Optional.of(elevator::getSetpointPose)));
+        Optional.of(elevator::getLinearPositionMeters)));
 
     RobotModeTriggers.disabled().onTrue(led.setRainbow().ignoringDisable(true));
     take.hasCoral.and(RobotModeTriggers.disabled().negate()).onTrue(led.setGreen());
@@ -152,18 +164,18 @@ public class Robot extends TimedRobot {
             Optional.of(joystick::getZ)).withDeadline(autoAlignEnd()));
 
     // joystick.povRight().onTrue(Wrist.runSysIdRoutine());
-    elevator.atZeroNeedReset.onTrue(elevator.zero());
+    // elevator.atZeroNeedReset.onTrue(elevator.zero());
+    joystick.button(13).onTrue(elevator.setSetpointCommand(ElevatorState.Zeroing).until(elevator.basicallyNotMoving)
+        .andThen(elevator.zero()).withTimeout(14).andThen(elevator.elevatorToPosition(ElevatorState.Handoff)));
   }
 
   public Command autoAlignEnd() {
     return Commands.race(
-      Commands.waitUntil(driveTrain.atSetpoint), 
-      Commands.sequence(
-        Commands.waitUntil(elevator.atSetpoint(ElevatorState.Handoff).negate()),
-        Commands.waitUntil(elevator.atSetpoint(ElevatorState.Handoff))
-      ), 
-      Commands.waitUntil(joystick.button(10))
-    );
+        Commands.waitUntil(driveTrain.atSetpoint),
+        Commands.sequence(
+            Commands.waitUntil(elevator.atSetpoint(ElevatorState.Handoff).negate()),
+            Commands.waitUntil(elevator.atSetpoint(ElevatorState.Handoff))),
+        Commands.waitUntil(joystick.button(10)));
   }
 
   /**
@@ -189,23 +201,29 @@ public class Robot extends TimedRobot {
 
   }
 
-  public Command onePiece() {
-    return driveTrain
-        .autoAlign(() -> DriveSetpoints.B, Optional.empty(), Optional.empty(), Optional.empty())
-        .until(driveTrain.atSetpoint)
-        .andThen(Wrist.wristToPosition(WristState.Safe))
-        .andThen(elevator.elevatorToPosition(ElevatorState.Level4))
-        .andThen(Wrist.wristToPosition(WristState.Level4))
-        .andThen(shootNote());
+  public Supplier<Command> onePiece(DriveSetpoints setpoint) {
+    return () -> {
+      return driveTrain
+          .autoAlign(() -> setpoint, Optional.empty(), Optional.empty(), Optional.empty())
+          .until(driveTrain.atSetpointAuto)
+          .andThen(Wrist.wristToPosition(WristState.Safe))
+          .andThen(elevator.elevatorToPosition(ElevatorState.Level4))
+          .andThen(Wrist.wristToPosition(WristState.Level4))
+          .andThen(shootNote());
+    };
+  }
+
+  public Command test() {
+    return sourceIntake(false);
   }
 
   public Command threePieceLeft() {
-    return reefCycle(DriveSetpoints.E, ElevatorState.Level4, WristState.Level4)
-        .andThen(sourceIntake(false))
-        .andThen(reefCycle(DriveSetpoints.F, ElevatorState.Level4, WristState.Level4))
-        .andThen(sourceIntake(false))
-        .andThen(reefCycle(DriveSetpoints.B, ElevatorState.Level4, WristState.Level4))
-        .andThen(sourceIntake(false));
+    return reefCycle(DriveSetpoints.I, ElevatorState.Level4, WristState.Level4)
+        .andThen(sourceIntake(true))
+        .andThen(reefCycle(DriveSetpoints.J, ElevatorState.Level4, WristState.Level4))
+        .andThen(sourceIntake(true))
+        .andThen(reefCycle(DriveSetpoints.A, ElevatorState.Level4, WristState.Level4))
+        .andThen(sourceIntake(true));
   }
 
   public Command threePieceRight() {
@@ -230,7 +248,7 @@ public class Robot extends TimedRobot {
         () -> driveSetpoint,
         Optional.empty(),
         Optional.empty(),
-        Optional.empty()).until(driveTrain.atSetpoint)
+        Optional.empty()).until(driveTrain.atSetpointAuto)
         .andThen(Wrist.wristToPosition(WristState.Safe))
         .andThen(elevator.elevatorToPosition(elevatorSetpoint))
         .andThen(shootNote())
@@ -242,7 +260,7 @@ public class Robot extends TimedRobot {
 
   public Command sourceIntake(boolean left) {
     return driveTrain.autoAlign(() -> left ? DriveSetpoints.LEFT_HP : DriveSetpoints.RIGHT_HP, Optional.empty(),
-        Optional.empty(), Optional.empty()).until(driveTrain.atSetpoint)
+        Optional.empty(), Optional.empty()).until(driveTrain.atSetpointSource)
         .andThen(intake());
   }
 

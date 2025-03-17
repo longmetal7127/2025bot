@@ -94,7 +94,7 @@ public class Superstructure {
     public static final double kElevatorkGStage1 = 0.64125;
     public static final double kElevatorkGStage2 = 0.9465;
 
-    public static final double kElevatorkS = 0.34162;
+    public static final double kElevatorkS = 0.912;
     public static final double kElevatorkV = 0.12032;
     public static final double kElevatorkA = 0;
 

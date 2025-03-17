@@ -76,8 +76,8 @@ public class DriveTrain extends SubsystemBase {
       DriveConstants.kBackRightChassisAngularOffset);
   private final TimeInterpolatableBuffer<Rotation2d> yawBuffer = TimeInterpolatableBuffer.createBuffer(.25);
 
-  private SlewRateLimiter accelfilterxL4 = new SlewRateLimiter(1);
-  private SlewRateLimiter accelfilteryL4 = new SlewRateLimiter(1);
+  private SlewRateLimiter accelfilterxL4 = new SlewRateLimiter(0.75);
+  private SlewRateLimiter accelfilteryL4 = new SlewRateLimiter(0.75);
 
   public DriveSetpoints setpoint = DriveSetpoints.A;
 
@@ -122,6 +122,8 @@ public class DriveTrain extends SubsystemBase {
       AutoConstants.kRotation.kI,
       AutoConstants.kRotation.kD);
   public Trigger atSetpoint = new Trigger(() -> xErr() <= 0.02 && yErr() <= 0.02 && aErr() <= 1);
+  public Trigger atSetpointAuto = new Trigger(() -> xErr() <= 0.03 && yErr() <= 0.03 && aErr() <= 3);
+  public Trigger atSetpointSource = new Trigger(() -> xErr() <= 0.04 && yErr() <= 0.04 && aErr() <= 3);
 
   /** Creates a new DriveSubsystem. */
   public DriveTrain() {
@@ -266,7 +268,7 @@ public class DriveTrain extends SubsystemBase {
    */
   public void resetOdometry(Pose2d pose) {
     m_odometry.resetPosition(
-        m_gyro.getRotation2d(),
+      m_gyro.getRotation2d(),
         new SwerveModulePosition[] {
             m_frontLeft.getPosition(),
             m_frontRight.getPosition(),
@@ -464,7 +466,7 @@ public class DriveTrain extends SubsystemBase {
               : OperatorConstants.kDriveDeadband;
 
           if (heightSupplier.isPresent())
-            if (MathUtil.isNear(heightSupplier.get().getAsDouble(), ElevatorState.Level4.height, 0.02)) {
+            if (MathUtil.isNear(heightSupplier.get().getAsDouble(), ElevatorState.Level4.height, 0.2)) {
               x = accelfilterxL4.calculate(x);
               y = accelfilteryL4.calculate(y);
             }

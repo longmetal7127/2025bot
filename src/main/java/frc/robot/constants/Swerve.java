@@ -230,8 +230,8 @@ public class Swerve {
     K(FiducialPoseEstimator.tagLayout.getTagPose(19).get(), true),
     L(FiducialPoseEstimator.tagLayout.getTagPose(19).get(), false),
     // PROCESSOR(Pose2d.kZero),
-    LEFT_HP(new Pose2d(1.18, 7.24, Rotation2d.fromDegrees(125.989 + 180))),
-    RIGHT_HP(new Pose2d(1.10, 0.89, Rotation2d.fromDegrees(125.989 + 180).unaryMinus()));
+    LEFT_HP(new Pose2d(1.24, 7.18, Rotation2d.fromDegrees(125.989 + 180))),
+    RIGHT_HP(new Pose2d(1.22, 0.90, Rotation2d.fromDegrees(125.989 + 180).unaryMinus()));
 
     private final Pose2d pose;
 

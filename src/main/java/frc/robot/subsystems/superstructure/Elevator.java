@@ -52,7 +52,8 @@ public class Elevator extends SubsystemBase {
     Algae1(0.653),
     Algae2(1.045),
     SourcePickup(0.2),
-    Handoff(0);
+    Handoff(0),
+    Zeroing(-0.013);
 
     public double height;
 
@@ -97,13 +98,18 @@ public class Elevator extends SubsystemBase {
   public final Trigger atMax = new Trigger(() -> getLinearPosition().isNear(Meters.of(0.668),
       Inches.of(3)));
   public Trigger atSetpoint = new Trigger(() -> {
-    return MathUtil.isNear(getLinearPositionMeters(), elevatorCurrentTarget.height, 0.02);
+    return MathUtil.isNear(getLinearPositionMeters(), elevatorCurrentTarget.height, 0.03);
   });
 
   public Trigger atZeroNeedReset = new Trigger(() -> getLinearPosition().isNear(
       Inches.of(0), Inches.of(3))
       && elevatorMotor.getVelocity().getValue().isNear(RPM.of(0), RotationsPerSecond.of(0.005))
-      && (elevatorMotor.getTorqueCurrent().getValueAsDouble() < -20) && this.elevatorCurrentTarget == ElevatorState.Handoff)
+      && (elevatorMotor.getTorqueCurrent().getValueAsDouble() < -20)
+      && this.elevatorCurrentTarget == ElevatorState.Handoff)
+      .debounce(0.5);
+  public Trigger basicallyNotMoving = new Trigger(
+      () -> elevatorMotor.getVelocity().getValue().isNear(RPM.of(0), RotationsPerSecond.of(0.005)) &&
+          getLinearPositionMeters() < 0.25)
       .debounce(0.5);
 
   public Elevator() {
@@ -305,7 +311,7 @@ public class Elevator extends SubsystemBase {
 
   public Trigger atSetpoint(ElevatorState setpoint) {
     return new Trigger(() -> {
-      return MathUtil.isNear(getLinearPositionMeters(), setpoint.height, 0.02);
+      return MathUtil.isNear(getLinearPositionMeters(), setpoint.height, 0.03);
     });
   }
 
