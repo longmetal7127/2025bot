@@ -555,8 +555,7 @@ public class DriveTrain extends SubsystemBase {
       SwerveSample cmd = repulsorFieldPlanner.getCmd(
           robotPose,
           getChassisSpeeds(),
-          DriveConstants.kMaxSpeedMetersPerSecond,
-          true);
+          DriveConstants.kMaxSpeedMetersPerSecond);
 
       // Apply the trajectory with rotation adjustment
       SwerveSample adjustedSample = new SwerveSample(
