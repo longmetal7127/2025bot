@@ -147,7 +147,7 @@ public class Swerve {
 
     public static final class kTranslation {
 
-      public static final double kP = 4.8;
+      public static final double kP = 4.2;
       public static final double kI = 0.0;
       public static final double kD = 0.2;
     }

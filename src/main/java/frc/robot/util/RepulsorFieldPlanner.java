@@ -6,19 +6,12 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
-import edu.wpi.first.networktables.NetworkTableEvent.Kind;
 import edu.wpi.first.networktables.NetworkTableInstance;
-import edu.wpi.first.networktables.NetworkTableListener;
 import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.wpilibj.RobotBase;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.constants.Constants;
-import frc.robot.subsystems.vision.FiducialPoseEstimator;
-
 import java.util.ArrayList;
-import java.util.EnumSet;
 import java.util.List;
-import java.util.Optional;
 import dev.doglog.DogLog;
 
 public class RepulsorFieldPlanner {
@@ -246,9 +239,7 @@ public class RepulsorFieldPlanner {
       for (int y = 0; y <= ARROWS_Y; y++) {
         var translation = new Translation2d(x * Constants.FIELD_LENGTH_METERS / ARROWS_X,
             y * Constants.FIELD_WIDTH_METERS / ARROWS_Y);
-        var force = Force.kZero;
-        force = force.plus(getObstacleForce(translation, goal));
-        force = force.plus(getGoalForce(translation, goal));
+        var force = getForce(translation, goal);
 
         if (force.getNorm() < 1e-6) {
           arrows.set(x * (ARROWS_Y + 1) + y, arrowBackstage);
@@ -287,8 +278,7 @@ public class RepulsorFieldPlanner {
 
   Force getForce(Translation2d curLocation, Translation2d target) {
     var goalForce = getGoalForce(curLocation, target)
-        .plus(getObstacleForce(curLocation, target))
-        .times(Math.min(1.0, curLocation.getDistance(target))); // Adjust scaling
+        .plus(getObstacleForce(curLocation, target));
     return goalForce;
   }
 
@@ -314,31 +304,30 @@ public class RepulsorFieldPlanner {
     updateArrows();
   }
 
-  public SwerveSample getCmd(
+  public SwerveSample getSample(
       Pose2d pose, ChassisSpeeds currentSpeeds, double maxSpeed) {
-    return getCmd(pose, currentSpeeds, maxSpeed, pose.getRotation());
+    return getSample(pose, currentSpeeds, maxSpeed, pose.getRotation());
   }
 
-  public SwerveSample getCmd(
+  public SwerveSample getSample(
       Pose2d pose,
       ChassisSpeeds currentSpeeds,
       double maxSpeed,
       Rotation2d goalRotation) {
-    double stepSize_m = 10 * 0.02; 
+    double stepSize_m;
     var curTrans = pose.getTranslation();
     var err = curTrans.minus(goal);
 
     DogLog.log("Repulsor/err", curTrans.getDistance(goal));
-    DogLog.log("Repulsor/toggle_dist", stepSize_m * 1.5);
-
-    if (err.getNorm() < stepSize_m) {
-      return sample(goal, goalRotation, 0, 0, 0);
+    double slowdownDist = 1;
+    if (err.getNorm() < slowdownDist) { // slow down 1 meter out
+      stepSize_m = MathUtil.interpolate(0, maxSpeed * 0.02, err.getNorm() / slowdownDist);
     } else {
-      var netForce = getGoalForce(curTrans, goal).plus(getObstacleForce(curTrans, goal));
-      var dist = err.getNorm();
-      stepSize_m = Math.min(5.14, Math.sqrt(6 /* 14 */ * dist)) * 0.02;
-      var step = new Translation2d(stepSize_m, netForce.getAngle());
-      return sample(goal, goalRotation, (step.getX() / 0.02), (step.getY() / 0.02), 0);
+      stepSize_m = maxSpeed * 0.02;
     }
+
+    var netForce = getForce(curTrans, goal);
+    var step = new Translation2d(stepSize_m, netForce.getAngle());
+    return sample(curTrans.plus(step), goalRotation, (step.getX() / 0.02), (step.getY() / 0.02), 0);
   }
 }
