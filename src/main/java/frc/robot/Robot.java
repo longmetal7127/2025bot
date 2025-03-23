@@ -10,24 +10,39 @@ import choreo.auto.AutoRoutine;
 import choreo.auto.AutoTrajectory;
 import edu.wpi.first.epilogue.Epilogue;
 import edu.wpi.first.epilogue.Logged;
-import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.epilogue.logging.EpilogueBackend;
+import edu.wpi.first.epilogue.logging.FileBackend;
+import edu.wpi.first.epilogue.logging.NTEpilogueBackend;
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.DataLogManager;
+import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.PowerDistribution;
+import edu.wpi.first.wpilibj.PowerDistribution.ModuleType;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
-import edu.wpi.first.wpilibj2.command.Commands;
-import edu.wpi.first.wpilibj2.command.RunCommand;
+import static edu.wpi.first.wpilibj2.command.Commands.*;
 import edu.wpi.first.wpilibj2.command.button.CommandJoystick;
 import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
 import frc.robot.constants.Constants;
-import frc.robot.constants.Constants.OperatorConstants;
+import frc.robot.constants.Swerve.DriveSetpoints;
 import frc.robot.subsystems.DriveTrain;
-import frc.robot.subsystems.superstructure.Arm;
+import frc.robot.subsystems.LED;
+import frc.robot.subsystems.superstructure.Wrist;
+import frc.robot.subsystems.superstructure.Elevator.ElevatorState;
+import frc.robot.subsystems.superstructure.Take;
+import frc.robot.subsystems.superstructure.Wrist.WristState;
 import frc.robot.subsystems.superstructure.Elevator;
 import frc.robot.util.Tracer;
+
+import java.util.Optional;
+import java.util.function.Supplier;
+
 import org.littletonrobotics.urcl.URCL;
+
+import com.ctre.phoenix6.SignalLogger;
 
 /**
  * The VM is configured to automatically run this class, and to call the
@@ -40,18 +55,19 @@ import org.littletonrobotics.urcl.URCL;
  */
 @Logged
 public class Robot extends TimedRobot {
-
   private Command m_autonomousCommand;
   private DriveTrain driveTrain = new DriveTrain();
-  private Elevator elevator = new Elevator();
-  private Arm arm = new Arm();
+  public Elevator elevator = new Elevator();
+  public Wrist Wrist = new Wrist();
+  private Take take = new Take();
+  private LED led = new LED();
 
   private AutoFactory autoFactory;
   private final AutoChooser autoChooser;
   public static CommandJoystick joystick = new CommandJoystick(
-    Constants.OperatorConstants.kDriverJoystickPort
-  );
+      Constants.OperatorConstants.kDriverJoystickPort);
   private final CommandScheduler scheduler = CommandScheduler.getInstance();
+  PowerDistribution pdh = new PowerDistribution(20, ModuleType.kRev);
 
   /**
    * This function is run when the robot is first started up and should be used
@@ -61,78 +77,112 @@ public class Robot extends TimedRobot {
   public Robot() {
     DataLogManager.start();
     URCL.start();
+    SignalLogger.start();
+    // DogLog.setOptions(new DogLogOptions().withCaptureDs(true));
+    // DogLog.setPdh(pdh);
+
     autoFactory = new AutoFactory(
-      driveTrain::getPose,
-      driveTrain::resetOdometry,
-      new AutoController(driveTrain),
-      true,
-      driveTrain
-    );
+        driveTrain::getPose,
+        driveTrain::resetOdometry,
+        new AutoController(driveTrain),
+        true,
+        driveTrain);
+    // configureBindingsSysid();
     configureBindings();
     autoChooser = new AutoChooser();
 
-    autoChooser.addRoutine("testauto", this::auto);
-    SmartDashboard.putData("hiii", autoChooser);
+    autoChooser.addCmd("One piece A", this.onePiece(DriveSetpoints.A));
+    autoChooser.addCmd("One piece B", this.onePiece(DriveSetpoints.B));
+    autoChooser.addCmd("One piece C", this.onePiece(DriveSetpoints.C));
+    autoChooser.addCmd("One piece D", this.onePiece(DriveSetpoints.D));
+    autoChooser.addCmd("One piece E", this.onePiece(DriveSetpoints.E));
+    autoChooser.addCmd("One piece F", this.onePiece(DriveSetpoints.F));
+    autoChooser.addCmd("One piece G", this.onePiece(DriveSetpoints.G));
+    autoChooser.addCmd("One piece H", this.onePiece(DriveSetpoints.H));
+    autoChooser.addCmd("One piece I", this.onePiece(DriveSetpoints.I));
+    autoChooser.addCmd("One piece J", this.onePiece(DriveSetpoints.J));
+    autoChooser.addCmd("One piece K", this.onePiece(DriveSetpoints.K));
+    autoChooser.addCmd("One piece L", this.onePiece(DriveSetpoints.L));
+
+    autoChooser.addCmd("Three piece Left", this::threePieceLeft);
+    autoChooser.addCmd("Three piece Right", this::threePieceRight);
+    autoChooser.addCmd("test", this::test);
+
+    SmartDashboard.putData("Auto Chooser", autoChooser);
     RobotModeTriggers.autonomous().whileTrue(autoChooser.selectedCommandScheduler());
 
-    driveTrain.setDefaultCommand(
-      new RunCommand(
-        () -> {
-          double multiplier = (((joystick.getThrottle() * -1) + 1) / 2); // turbo mode
-          double z = joystick.getZ();
-          double x = joystick.getX();
-          double y = joystick.getY();
+    driveTrain.setDefaultCommand(driveTrain.joystickDrive(joystick::getX, joystick::getY, joystick::getZ,
+        Optional.of(elevator::getLinearPositionMeters)));
 
-          // limiting x/y on input methods
-          x =
-            Math.sin(Math.atan2(x, y)) *
-            Math.min(Math.max(Math.abs(y), Math.abs(x)), 1);
-          y =
-            Math.cos(Math.atan2(x, y)) *
-            Math.min(Math.max(Math.abs(y), Math.abs(x)), 1);
-          double deadband = OperatorConstants.kLogitech
-            ? OperatorConstants.kLogitechDeadband
-            : OperatorConstants.kDriveDeadband;
+    RobotModeTriggers.disabled().onTrue(led.setRainbow().ignoringDisable(true));
+    take.hasCoral.and(RobotModeTriggers.disabled().negate()).onTrue(led.setGreen());
+    take.hasCoral.negate().and(RobotModeTriggers.disabled().negate()).onTrue(led.setDefault());
 
-          driveTrain.drive(
-            MathUtil.applyDeadband(y * -multiplier, deadband),
-            MathUtil.applyDeadband(x * -multiplier, deadband),
-            MathUtil.applyDeadband(z * -1, deadband),
-            true
-          );
-        },
-        driveTrain
-      )
-    );
     Epilogue.bind(this);
+    var fileBackend = new FileBackend(DataLogManager.getLog());
+    var epilogueConfig = Epilogue.getConfig();
+    epilogueConfig.backend = EpilogueBackend.multi(fileBackend, new NTEpilogueBackend(NetworkTableInstance.getDefault()));
+  }
+
+  public void configureBindingsSysid() {
+    // joystick.trigger().onTrue(Wrist.wristToPosition(WristState.Safe).andThen(elevator.runSysIdRoutine()));
+    joystick.trigger().onTrue(Wrist.runSysIdRoutine());
+
   }
 
   public void configureBindings() {
+    joystick.button(5).onTrue(driveTrain.zeroHeading());
+
     joystick
-      .trigger()
-      .onTrue(
-        Commands.runOnce(() -> {
-          driveTrain.zeroHeading();
-        })
-      );
-    joystick.button(1).onTrue(elevator.incrementSetpointCommand(1));
-    joystick.button(2).onTrue(elevator.incrementSetpointCommand(-1));
+        .button(2)
+        .onTrue(
+            sequence(
+                Wrist.wristToPosition(WristState.Safe),
+
+                elevator.elevatorToPosition(ElevatorState.Level2),
+                Wrist.wristToPosition(WristState.LevelNormal)));
     joystick
-      .button(3)
-      .onTrue(
-        Commands.sequence(
-          elevator.setSetpointCommand(0),
-          arm.setSetpointCommand(40)
-        )
-      );
+        .button(3)
+        .onTrue(
+            sequence(
+                Wrist.wristToPosition(WristState.Safe),
+                elevator.elevatorToPosition(ElevatorState.Level3),
+                Wrist.wristToPosition(WristState.LevelNormal)));
+
     joystick
-      .button(4)
-      .onTrue(
-        Commands.sequence(
-          elevator.setSetpointCommand(1),
-          arm.setSetpointCommand(135)
-        )
-      );
+        .button(4)
+        .onTrue(
+            sequence(
+                Wrist.wristToPosition(WristState.Safe),
+                elevator.elevatorToPosition(ElevatorState.Level4),
+                Wrist.wristToPosition(WristState.Level4)));
+
+    joystick.povDown().or(joystick.povDownLeft()).or(joystick.povDownRight()).onTrue(intake());
+    joystick.trigger().whileTrue(take.runTakeMotor());
+    joystick.button(11).onTrue(
+        driveTrain.autoAlignChooseSetpoint(true,
+            Optional.of(joystick::getX),
+            Optional.of(joystick::getX),
+            Optional.of(joystick::getZ)).withDeadline(autoAlignEnd()));
+    joystick.button(12).onTrue(
+        driveTrain.autoAlignChooseSetpoint(false,
+            Optional.of(joystick::getX),
+            Optional.of(joystick::getX),
+            Optional.of(joystick::getZ)).withDeadline(autoAlignEnd()));
+
+    // joystick.povRight().onTrue(Wrist.runSysIdRoutine());
+    // elevator.atZeroNeedReset.onTrue(elevator.zero());
+    joystick.button(13).onTrue(elevator.setSetpointCommand(ElevatorState.Zeroing).until(elevator.basicallyNotMoving)
+        .andThen(elevator.zero()).withTimeout(14).andThen(elevator.elevatorToPosition(ElevatorState.Handoff)));
+  }
+
+  public Command autoAlignEnd() {
+    return race(
+        waitUntil(driveTrain.atSetpoint),
+        sequence(
+            waitUntil(elevator.atSetpoint(ElevatorState.Handoff).negate()),
+            waitUntil(elevator.atSetpoint(ElevatorState.Handoff))),
+        waitUntil(joystick.button(10)));
   }
 
   /**
@@ -155,14 +205,87 @@ public class Robot extends TimedRobot {
     // robot's periodic
     // block in order for anything in the Command-based framework to work.
     Tracer.traceFunc("CommandScheduler", scheduler::run);
+
+  }
+
+  public Supplier<Command> onePiece(DriveSetpoints setpoint) {
+    return () -> {
+      return driveTrain
+          .autoAlign(() -> setpoint, Optional.empty(), Optional.empty(), Optional.empty())
+          .until(driveTrain.atSetpointAuto)
+          .andThen(Wrist.wristToPosition(WristState.Safe))
+          .andThen(elevator.elevatorToPosition(ElevatorState.Level4))
+          .andThen(Wrist.wristToPosition(WristState.Level4))
+          .andThen(shootNote());
+    };
+  }
+
+  public Command test() {
+    return sourceIntake(false);
+  }
+
+  public Command threePieceLeft() {
+    return reefCycle(DriveSetpoints.I, ElevatorState.Level4, WristState.Level4)
+        .andThen(sourceIntake(true))
+        .andThen(reefCycle(DriveSetpoints.J, ElevatorState.Level4, WristState.Level4))
+        .andThen(sourceIntake(true))
+        .andThen(reefCycle(DriveSetpoints.A, ElevatorState.Level4, WristState.Level4))
+        .andThen(sourceIntake(true));
+  }
+
+  public Command threePieceRight() {
+    return reefCycle(DriveSetpoints.E, ElevatorState.Level4, WristState.Level4)
+        .andThen(sourceIntake(false))
+        .andThen(reefCycle(DriveSetpoints.F, ElevatorState.Level4, WristState.Level4))
+        .andThen(sourceIntake(false))
+        .andThen(reefCycle(DriveSetpoints.B, ElevatorState.Level4, WristState.Level4))
+        .andThen(sourceIntake(false));
+  }
+
+  public Command shootNote() {
+    return take.runTakeMotor().withDeadline(
+        sequence(
+            waitUntil(take.hasCoral),
+            waitUntil(take.hasCoral.negate()),
+            waitSeconds(0.2)));
+  };
+
+  public Command reefCycle(DriveSetpoints driveSetpoint, ElevatorState elevatorSetpoint, WristState wristState) {
+    return driveTrain.autoAlign(
+        () -> driveSetpoint,
+        Optional.empty(),
+        Optional.empty(),
+        Optional.empty()).until(driveTrain.atSetpointAuto).alongWith(
+            sequence(
+                waitUntil(driveTrain.almostAtSetpoint),
+                Wrist.wristToPosition(WristState.Safe),
+                elevator.elevatorToPosition(elevatorSetpoint),
+                waitUntil(driveTrain.atSetpoint),
+                shootNote()));
+
+  }
+
+  public Command sourceIntake(boolean left) {
+    return driveTrain.autoAlign(() -> left ? DriveSetpoints.LEFT_HP : DriveSetpoints.RIGHT_HP, Optional.empty(),
+        Optional.empty(), Optional.empty()).until(driveTrain.atSetpointSource)
+        .alongWith(sequence(waitUntil(driveTrain.almostAtSetpoint.negate()),
+            Wrist.wristToPosition(WristState.Safe),
+            elevator.elevatorToPosition(ElevatorState.Handoff),
+            Wrist.setSetpointCommand(WristState.Handoff),
+            waitUntil(driveTrain.atSetpointSource),
+            intake()
+
+        ));
   }
 
   /** This function is called once each time the robot enters Disabled mode. */
   @Override
-  public void disabledInit() {}
+  public void disabledInit() {
+  }
 
   @Override
-  public void disabledPeriodic() {}
+  public void disabledPeriodic() {
+  }
 
   /**
    * This autonomous runs the autonomous command selected by your
@@ -175,7 +298,8 @@ public class Robot extends TimedRobot {
 
   /** This function is called periodically during autonomous. */
   @Override
-  public void autonomousPeriodic() {}
+  public void autonomousPeriodic() {
+  }
 
   @Override
   public void teleopInit() {
@@ -190,7 +314,8 @@ public class Robot extends TimedRobot {
 
   /** This function is called periodically during operator control. */
   @Override
-  public void teleopPeriodic() {}
+  public void teleopPeriodic() {
+  }
 
   @Override
   public void testInit() {
@@ -200,19 +325,23 @@ public class Robot extends TimedRobot {
 
   /** This function is called periodically during test mode. */
   @Override
-  public void testPeriodic() {}
+  public void testPeriodic() {
+  }
 
   /** This function is called once when the robot is first started up. */
   @Override
-  public void simulationInit() {}
+  public void simulationInit() {
+  }
 
   /** This function is called periodically whilst in simulation. */
   // simulation period method in your Robot.java
   @Override
-  public void simulationPeriodic() {}
+  public void simulationPeriodic() {
+  }
 
   public Command getAutonomousCommand() {
-    return Commands.run(() -> {});
+    return run(() -> {
+    });
   }
 
   public AutoRoutine auto() {
@@ -226,24 +355,35 @@ public class Robot extends TimedRobot {
     // then shoots the starting note,
     // then runs the trajectory to the first close note while extending the intake
     routine
-      .active()
-      .onTrue(
-        driveTrain
-          .cmdResetOdometry(
-            trajectory
-              .getInitialPose()
-              .orElseGet(() -> {
-                routine.kill();
-                return new Pose2d();
-              })
-          )
-          .withName("auto entry point")
-      );
+        .active()
+        .onTrue(
+            driveTrain
+                .cmdResetOdometry(
+                    trajectory
+                        .getInitialPose()
+                        .orElseGet(() -> {
+                          routine.kill();
+                          return new Pose2d();
+                        }))
+                .withName("auto entry point"));
 
     return routine;
   }
 
-  public Command goSomewhere() {
-    return Commands.run(() -> {});
+  public Command intake() {
+    return sequence(
+        Wrist.wristToPosition(WristState.Safe)
+            .unless(Wrist.atSetpoint(WristState.Handoff).and(elevator.atSetpoint(ElevatorState.Handoff))),
+        elevator.elevatorToPosition(ElevatorState.Handoff),
+        Wrist.wristToPosition(WristState.Handoff),
+        take.runTakeMotorReverse(1200).until(take.hasCoral),
+
+        take.runTakeMotorReverse(-390).until(take.hasCoral.negate())
+
+    );
+  }
+
+  public static boolean isOnRed() {
+    return DriverStation.getAlliance().orElse(DriverStation.Alliance.Blue) == DriverStation.Alliance.Red;
   }
 }
