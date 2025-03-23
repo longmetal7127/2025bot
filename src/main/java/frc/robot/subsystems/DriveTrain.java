@@ -124,6 +124,10 @@ public class DriveTrain extends SubsystemBase {
   public Trigger atSetpoint = new Trigger(() -> xErr() <= 0.02 && yErr() <= 0.02 && aErr() <= 1).debounce(0.02);
   public Trigger atSetpointAuto = new Trigger(() -> xErr() <= 0.03 && yErr() <= 0.03 && aErr() <= 3);
   public Trigger atSetpointSource = new Trigger(() -> xErr() <= 0.04 && yErr() <= 0.04 && aErr() <= 3);
+  public Trigger almostAtSetpoint = new Trigger(
+      () -> {
+        return getPose().minus(setpoint.getPose()).getTranslation().getNorm() < 1;
+      });
 
   /** Creates a new DriveSubsystem. */
   public DriveTrain() {
@@ -268,7 +272,7 @@ public class DriveTrain extends SubsystemBase {
    */
   public void resetOdometry(Pose2d pose) {
     m_odometry.resetPosition(
-      m_gyro.getRotation2d(),
+        m_gyro.getRotation2d(),
         new SwerveModulePosition[] {
             m_frontLeft.getPosition(),
             m_frontRight.getPosition(),
@@ -554,7 +558,6 @@ public class DriveTrain extends SubsystemBase {
       var robotPose = getPose();
       SwerveSample cmd = repulsorFieldPlanner.getSample(
           robotPose,
-          getChassisSpeeds(),
           DriveConstants.kMaxSpeedMetersPerSecond);
 
       // Apply the trajectory with rotation adjustment
@@ -573,20 +576,24 @@ public class DriveTrain extends SubsystemBase {
           cmd.moduleForcesY());
 
       // Apply the adjusted sample
-      followTrajectory(adjustedSample);
+      followTrajectory(adjustedSample, true);
     })
         .withName("AutoAlign");
   }
 
-  public void followTrajectory(SwerveSample referenceState) {
+  public void followTrajectory(SwerveSample referenceState, boolean usePIDTranslation) {
 
     Pose2d pose = this.getPose();
     double xFF = referenceState.vx;
     double yFF = referenceState.vy;
     double rotationFF = referenceState.omega;
+    double xFeedback = 0;
+    double yFeedback = 0;
 
-    double xFeedback = xController.calculate(pose.getX(), referenceState.x);
-    double yFeedback = yController.calculate(pose.getY(), referenceState.y);
+    if (usePIDTranslation) {
+      xFeedback = xController.calculate(pose.getX(), referenceState.x);
+      yFeedback = yController.calculate(pose.getY(), referenceState.y);
+    }
     double rotationFeedback = rController.calculate(
         pose.getRotation().getRadians(),
         referenceState.heading);

@@ -5,7 +5,6 @@ import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.wpilibj.RobotBase;
@@ -305,13 +304,12 @@ public class RepulsorFieldPlanner {
   }
 
   public SwerveSample getSample(
-      Pose2d pose, ChassisSpeeds currentSpeeds, double maxSpeed) {
-    return getSample(pose, currentSpeeds, maxSpeed, pose.getRotation());
+      Pose2d pose, double maxSpeed) {
+    return getSample(pose, maxSpeed, pose.getRotation());
   }
 
   public SwerveSample getSample(
       Pose2d pose,
-      ChassisSpeeds currentSpeeds,
       double maxSpeed,
       Rotation2d goalRotation) {
     double stepSize_m;

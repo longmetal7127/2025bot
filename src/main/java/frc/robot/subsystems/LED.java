@@ -2,7 +2,6 @@ package frc.robot.subsystems;
 
 import static edu.wpi.first.units.Units.*;
 
-
 import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.wpilibj.AddressableLED;
 import edu.wpi.first.wpilibj.AddressableLEDBuffer;
@@ -18,8 +17,10 @@ public class LED extends SubsystemBase {
     public final AddressableLED m_led;
     public final AddressableLEDBuffer m_ledBuffer;
 
-    private final LEDPattern m_red = LEDPattern.gradient(GradientType.kContinuous, new Color("#ff0000"), new Color("#220000"));
-    private final LEDPattern m_blue = LEDPattern.gradient(GradientType.kContinuous, new Color("#0000ff"), new Color("#000022"));
+    private final LEDPattern m_red = LEDPattern.gradient(GradientType.kContinuous, new Color("#ff0000"),
+            new Color("#220000"));
+    private final LEDPattern m_blue = LEDPattern.gradient(GradientType.kContinuous, new Color("#0000ff"),
+            new Color("#000022"));
     private final LEDPattern m_green = LEDPattern.solid(new Color("#00ff00"));
     private final LEDPattern m_rainbow = LEDPattern.rainbow(255, 128);
 
@@ -35,7 +36,7 @@ public class LED extends SubsystemBase {
     private LEDPattern m_curpattern;
 
     public LED() {
-        m_led = new AddressableLED(5);
+        m_led = new AddressableLED(6);
 
         // Reuse buffer
         // Default to a length of 60, start empty output
@@ -68,8 +69,8 @@ public class LED extends SubsystemBase {
     }
 
     public void periodic() {
-        if(m_defaultPattern == null && DriverStation.getAlliance().isPresent()) {
-            if(DriverStation.getAlliance().get() == Alliance.Red) {
+        if (m_defaultPattern == null && DriverStation.getAlliance().isPresent()) {
+            if (DriverStation.getAlliance().get() == Alliance.Red) {
                 m_defaultPattern = m_scrollingRed;
             } else {
                 m_defaultPattern = m_scrollingBlue;

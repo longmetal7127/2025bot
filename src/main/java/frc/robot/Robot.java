@@ -10,7 +10,11 @@ import choreo.auto.AutoRoutine;
 import choreo.auto.AutoTrajectory;
 import edu.wpi.first.epilogue.Epilogue;
 import edu.wpi.first.epilogue.Logged;
+import edu.wpi.first.epilogue.logging.EpilogueBackend;
+import edu.wpi.first.epilogue.logging.FileBackend;
+import edu.wpi.first.epilogue.logging.NTEpilogueBackend;
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.PowerDistribution;
@@ -19,7 +23,7 @@ import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
-import edu.wpi.first.wpilibj2.command.Commands;
+import static edu.wpi.first.wpilibj2.command.Commands.*;
 import edu.wpi.first.wpilibj2.command.button.CommandJoystick;
 import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
 import frc.robot.constants.Constants;
@@ -115,6 +119,9 @@ public class Robot extends TimedRobot {
     take.hasCoral.negate().and(RobotModeTriggers.disabled().negate()).onTrue(led.setDefault());
 
     Epilogue.bind(this);
+    var fileBackend = new FileBackend(DataLogManager.getLog());
+    var epilogueConfig = Epilogue.getConfig();
+    epilogueConfig.backend = EpilogueBackend.multi(fileBackend, new NTEpilogueBackend(NetworkTableInstance.getDefault()));
   }
 
   public void configureBindingsSysid() {
@@ -129,7 +136,7 @@ public class Robot extends TimedRobot {
     joystick
         .button(2)
         .onTrue(
-            Commands.sequence(
+            sequence(
                 Wrist.wristToPosition(WristState.Safe),
 
                 elevator.elevatorToPosition(ElevatorState.Level2),
@@ -137,7 +144,7 @@ public class Robot extends TimedRobot {
     joystick
         .button(3)
         .onTrue(
-            Commands.sequence(
+            sequence(
                 Wrist.wristToPosition(WristState.Safe),
                 elevator.elevatorToPosition(ElevatorState.Level3),
                 Wrist.wristToPosition(WristState.LevelNormal)));
@@ -145,7 +152,7 @@ public class Robot extends TimedRobot {
     joystick
         .button(4)
         .onTrue(
-            Commands.sequence(
+            sequence(
                 Wrist.wristToPosition(WristState.Safe),
                 elevator.elevatorToPosition(ElevatorState.Level4),
                 Wrist.wristToPosition(WristState.Level4)));
@@ -170,12 +177,12 @@ public class Robot extends TimedRobot {
   }
 
   public Command autoAlignEnd() {
-    return Commands.race(
-        Commands.waitUntil(driveTrain.atSetpoint),
-        Commands.sequence(
-            Commands.waitUntil(elevator.atSetpoint(ElevatorState.Handoff).negate()),
-            Commands.waitUntil(elevator.atSetpoint(ElevatorState.Handoff))),
-        Commands.waitUntil(joystick.button(10)));
+    return race(
+        waitUntil(driveTrain.atSetpoint),
+        sequence(
+            waitUntil(elevator.atSetpoint(ElevatorState.Handoff).negate()),
+            waitUntil(elevator.atSetpoint(ElevatorState.Handoff))),
+        waitUntil(joystick.button(10)));
   }
 
   /**
@@ -237,10 +244,10 @@ public class Robot extends TimedRobot {
 
   public Command shootNote() {
     return take.runTakeMotor().withDeadline(
-        Commands.sequence(
-            Commands.waitUntil(take.hasCoral),
-            Commands.waitUntil(take.hasCoral.negate()),
-            Commands.waitSeconds(0.2)));
+        sequence(
+            waitUntil(take.hasCoral),
+            waitUntil(take.hasCoral.negate()),
+            waitSeconds(0.2)));
   };
 
   public Command reefCycle(DriveSetpoints driveSetpoint, ElevatorState elevatorSetpoint, WristState wristState) {
@@ -248,20 +255,27 @@ public class Robot extends TimedRobot {
         () -> driveSetpoint,
         Optional.empty(),
         Optional.empty(),
-        Optional.empty()).until(driveTrain.atSetpointAuto)
-        .andThen(Wrist.wristToPosition(WristState.Safe))
-        .andThen(elevator.elevatorToPosition(elevatorSetpoint))
-        .andThen(shootNote())
-        .andThen(Wrist.wristToPosition(WristState.Safe)).andThen(
-            elevator.elevatorToPosition(ElevatorState.Handoff))
-        .andThen(Wrist.setSetpointCommand(WristState.Handoff)); // make sure to doublecheck it could be sketch but i
-                                                                // think it should be fineee
+        Optional.empty()).until(driveTrain.atSetpointAuto).alongWith(
+            sequence(
+                waitUntil(driveTrain.almostAtSetpoint),
+                Wrist.wristToPosition(WristState.Safe),
+                elevator.elevatorToPosition(elevatorSetpoint),
+                waitUntil(driveTrain.atSetpoint),
+                shootNote()));
+
   }
 
   public Command sourceIntake(boolean left) {
     return driveTrain.autoAlign(() -> left ? DriveSetpoints.LEFT_HP : DriveSetpoints.RIGHT_HP, Optional.empty(),
         Optional.empty(), Optional.empty()).until(driveTrain.atSetpointSource)
-        .andThen(intake());
+        .alongWith(sequence(waitUntil(driveTrain.almostAtSetpoint.negate()),
+            Wrist.wristToPosition(WristState.Safe),
+            elevator.elevatorToPosition(ElevatorState.Handoff),
+            Wrist.setSetpointCommand(WristState.Handoff),
+            waitUntil(driveTrain.atSetpointSource),
+            intake()
+
+        ));
   }
 
   /** This function is called once each time the robot enters Disabled mode. */
@@ -326,7 +340,7 @@ public class Robot extends TimedRobot {
   }
 
   public Command getAutonomousCommand() {
-    return Commands.run(() -> {
+    return run(() -> {
     });
   }
 
@@ -357,7 +371,7 @@ public class Robot extends TimedRobot {
   }
 
   public Command intake() {
-    return Commands.sequence(
+    return sequence(
         Wrist.wristToPosition(WristState.Safe)
             .unless(Wrist.atSetpoint(WristState.Handoff).and(elevator.atSetpoint(ElevatorState.Handoff))),
         elevator.elevatorToPosition(ElevatorState.Handoff),
