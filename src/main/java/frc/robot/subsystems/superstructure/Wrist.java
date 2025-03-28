@@ -245,7 +245,7 @@ public class Wrist extends SubsystemBase {
 
   public Trigger atSetpoint = new Trigger(() -> {
     return MathUtil.isNear(wristCurrentTarget.angle,
-        Units.rotationsToDegrees(getArmActualPosition()), 8);
+        Units.rotationsToDegrees(getArmActualPosition()), 9);
   });
 
   public Trigger atSetpoint(WristState setpoint) {

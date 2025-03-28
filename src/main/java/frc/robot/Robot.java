@@ -121,7 +121,8 @@ public class Robot extends TimedRobot {
     Epilogue.bind(this);
     var fileBackend = new FileBackend(DataLogManager.getLog());
     var epilogueConfig = Epilogue.getConfig();
-    epilogueConfig.backend = EpilogueBackend.multi(fileBackend, new NTEpilogueBackend(NetworkTableInstance.getDefault()));
+    epilogueConfig.backend = EpilogueBackend.multi(fileBackend,
+        new NTEpilogueBackend(NetworkTableInstance.getDefault()));
   }
 
   public void configureBindingsSysid() {
@@ -210,13 +211,7 @@ public class Robot extends TimedRobot {
 
   public Supplier<Command> onePiece(DriveSetpoints setpoint) {
     return () -> {
-      return driveTrain
-          .autoAlign(() -> setpoint, Optional.empty(), Optional.empty(), Optional.empty())
-          .until(driveTrain.atSetpointAuto)
-          .andThen(Wrist.wristToPosition(WristState.Safe))
-          .andThen(elevator.elevatorToPosition(ElevatorState.Level4))
-          .andThen(Wrist.wristToPosition(WristState.Level4))
-          .andThen(shootNote());
+      return reefCycle(setpoint, ElevatorState.Level4, WristState.Level4);
     };
   }
 
@@ -225,9 +220,9 @@ public class Robot extends TimedRobot {
   }
 
   public Command threePieceLeft() {
-    return reefCycle(DriveSetpoints.I, ElevatorState.Level4, WristState.Level4)
+    return reefCycle(DriveSetpoints.L, ElevatorState.Level4, WristState.Level4)
         .andThen(sourceIntake(true))
-        .andThen(reefCycle(DriveSetpoints.J, ElevatorState.Level4, WristState.Level4))
+        .andThen(reefCycle(DriveSetpoints.B, ElevatorState.Level4, WristState.Level4))
         .andThen(sourceIntake(true))
         .andThen(reefCycle(DriveSetpoints.A, ElevatorState.Level4, WristState.Level4))
         .andThen(sourceIntake(true));
