@@ -159,7 +159,11 @@ public class Robot extends TimedRobot {
                 Wrist.wristToPosition(WristState.Level4)));
 
     joystick.povDown().or(joystick.povDownLeft()).or(joystick.povDownRight()).onTrue(intake());
+    joystick.trigger().and(elevator.atSetpoint(ElevatorState.Level4)).whileTrue(take.runTakeMotor());
+    joystick.trigger().and(elevator.atSetpoint(ElevatorState.Level4).negate()).whileTrue(take.runTakeMotorReverse(1600));
+
     joystick.trigger().whileTrue(take.runTakeMotor());
+
     joystick.button(11).onTrue(
         driveTrain.autoAlignChooseSetpoint(true,
             Optional.of(joystick::getX),
@@ -220,20 +224,20 @@ public class Robot extends TimedRobot {
   }
 
   public Command threePieceLeft() {
-    return reefCycle(DriveSetpoints.L, ElevatorState.Level4, WristState.Level4)
+    return reefCycle(DriveSetpoints.I, ElevatorState.Level4, WristState.Level4)
         .andThen(sourceIntake(true))
-        .andThen(reefCycle(DriveSetpoints.B, ElevatorState.Level4, WristState.Level4))
+        .andThen(reefCycle(DriveSetpoints.L, ElevatorState.Level4, WristState.Level4))
         .andThen(sourceIntake(true))
-        .andThen(reefCycle(DriveSetpoints.A, ElevatorState.Level4, WristState.Level4))
+        .andThen(reefCycle(DriveSetpoints.K, ElevatorState.Level4, WristState.Level4))
         .andThen(sourceIntake(true));
   }
 
   public Command threePieceRight() {
-    return reefCycle(DriveSetpoints.E, ElevatorState.Level4, WristState.Level4)
+    return reefCycle(DriveSetpoints.F, ElevatorState.Level4, WristState.Level4)
         .andThen(sourceIntake(false))
-        .andThen(reefCycle(DriveSetpoints.F, ElevatorState.Level4, WristState.Level4))
+        .andThen(reefCycle(DriveSetpoints.C, ElevatorState.Level4, WristState.Level4))
         .andThen(sourceIntake(false))
-        .andThen(reefCycle(DriveSetpoints.B, ElevatorState.Level4, WristState.Level4))
+        .andThen(reefCycle(DriveSetpoints.D, ElevatorState.Level4, WristState.Level4))
         .andThen(sourceIntake(false));
   }
 

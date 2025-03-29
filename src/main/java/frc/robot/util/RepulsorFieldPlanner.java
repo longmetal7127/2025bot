@@ -315,17 +315,18 @@ public class RepulsorFieldPlanner {
     double stepSize_m;
     var curTrans = pose.getTranslation();
     var err = curTrans.minus(goal);
-
+    var useGoal = false;
     DogLog.log("Repulsor/err", curTrans.getDistance(goal));
     double slowdownDist = 1;
     if (err.getNorm() < slowdownDist) { // slow down 1 meter out
       stepSize_m = MathUtil.interpolate(0, maxSpeed * 0.02, err.getNorm() / slowdownDist);
+      useGoal = true;
     } else {
       stepSize_m = maxSpeed * 0.02;
     }
 
     var netForce = getForce(curTrans, goal);
     var step = new Translation2d(stepSize_m, netForce.getAngle());
-    return sample(curTrans.plus(step), goalRotation, (step.getX() / 0.02), (step.getY() / 0.02), 0);
+    return sample(!useGoal ? curTrans.plus(step) : goal, goalRotation, (step.getX() / 0.02), (step.getY() / 0.02), 0);
   }
 }

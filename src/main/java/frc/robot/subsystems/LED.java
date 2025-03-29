@@ -148,9 +148,9 @@ public class LED extends SubsystemBase {
     }
 
     public void periodic() {
-        m_curpattern.pattern.applyTo(m_left);
-        m_curpattern.pattern.applyTo(m_right);
-        m_curpattern.pattern.applyTo(m_middle);
+        m_curpattern.pattern.applyTo(m_ledBuffer);
+        //m_curpattern.pattern.applyTo(m_right);
+        //m_curpattern.pattern.applyTo(m_middle);
 
         // Set the LEDs
         m_led.setData(m_ledBuffer);
