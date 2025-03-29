@@ -124,6 +124,10 @@ public class DriveTrain extends SubsystemBase {
   public Trigger atSetpoint = new Trigger(() -> xErr() <= 0.02 && yErr() <= 0.02 && aErr() <= 1);
   public Trigger atSetpointAuto = new Trigger(() -> xErr() <= 0.03 && yErr() <= 0.03 && aErr() <= 3);
   public Trigger atSetpointSource = new Trigger(() -> xErr() <= 0.04 && yErr() <= 0.04 && aErr() <= 3);
+  public Trigger almostAtSetpoint = new Trigger(
+      () -> {
+        return getPose().minus(setpoint.getPose()).getTranslation().getNorm() < 1;
+      });
 
   /** Creates a new DriveSubsystem. */
   public DriveTrain() {

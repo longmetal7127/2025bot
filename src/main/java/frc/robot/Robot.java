@@ -255,21 +255,29 @@ public class Robot extends TimedRobot {
         () -> driveSetpoint,
         Optional.empty(),
         Optional.empty(),
-        Optional.empty()).until(driveTrain.atSetpointAuto)
-        .andThen(Wrist.wristToPosition(WristState.Safe))
-        .andThen(elevator.elevatorToPosition(elevatorSetpoint))
-        .andThen(shootNote())
-        .andThen(Wrist.wristToPosition(WristState.Safe)).andThen(
-            elevator.elevatorToPosition(ElevatorState.Handoff))
-        .andThen(Wrist.setSetpointCommand(WristState.Handoff)); // make sure to doublecheck it could be sketch but i
-                                                                // think it should be fineee
+        Optional.empty()).until(driveTrain.atSetpointAuto).alongWith(
+            sequence(
+                Commands.waitUntil(driveTrain.almostAtSetpoint),
+                Wrist.wristToPosition(WristState.Safe),
+                elevator.elevatorToPosition(elevatorSetpoint),
+                Commands.waitUntil(driveTrain.atSetpoint),
+                shootNote()));
+
   }
 
   public Command sourceIntake(boolean left) {
     return driveTrain.autoAlign(() -> left ? DriveSetpoints.LEFT_HP : DriveSetpoints.RIGHT_HP, Optional.empty(),
         Optional.empty(), Optional.empty()).until(driveTrain.atSetpointSource)
-        .andThen(intake());
+        .alongWith(sequence(waitUntil(driveTrain.almostAtSetpoint.negate()),
+            Wrist.wristToPosition(WristState.Safe),
+            elevator.elevatorToPosition(ElevatorState.Handoff),
+            Wrist.setSetpointCommand(WristState.Handoff),
+            Commands. waitUntil(driveTrain.atSetpointSource),
+            intake()
+
+        ));
   }
+
   public Command wrapLED(Command move) {
     return led.setFastRainbow().andThen(move).andThen(led.setDefault());
   }
