@@ -82,7 +82,7 @@ public class DriveTrain extends SubsystemBase {
   public DriveSetpoints setpoint = DriveSetpoints.A;
 
   // The gyro sensor
-  public final AHRS m_gyro = new AHRS(AHRS.NavXComType.kMXP_SPI);
+  public final AHRS m_gyro = new AHRS(AHRS.NavXComType.kUSB1);
   private int dev = SimDeviceDataJNI.getSimDeviceHandle("navX-Sensor[4]"); // TODO: figure out why this is a 4 and not 0
   // like in the docs
   private SimDouble angle = new SimDouble(

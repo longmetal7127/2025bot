@@ -10,7 +10,11 @@ import choreo.auto.AutoRoutine;
 import choreo.auto.AutoTrajectory;
 import edu.wpi.first.epilogue.Epilogue;
 import edu.wpi.first.epilogue.Logged;
+import edu.wpi.first.epilogue.logging.EpilogueBackend;
+import edu.wpi.first.epilogue.logging.FileBackend;
+import edu.wpi.first.epilogue.logging.NTEpilogueBackend;
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.PowerDistribution;
@@ -115,6 +119,9 @@ public class Robot extends TimedRobot {
     take.hasCoral.negate().and(RobotModeTriggers.disabled().negate()).onTrue(led.setDefault());
 
     Epilogue.bind(this);
+        var fileBackend = new FileBackend(DataLogManager.getLog());
+     var epilogueConfig = Epilogue.getConfig();
+     epilogueConfig.backend = EpilogueBackend.multi(fileBackend, new NTEpilogueBackend(NetworkTableInstance.getDefault()));
   }
 
   public void configureBindingsSysid() {
@@ -152,16 +159,16 @@ public class Robot extends TimedRobot {
 
     joystick.povDown().or(joystick.povDownLeft()).or(joystick.povDownRight()).onTrue(intake());
     joystick.trigger().whileTrue(take.runTakeMotor());
-    joystick.button(11).onTrue(
+    joystick.button(11).onTrue(wrapLED(
         driveTrain.autoAlignChooseSetpoint(true,
             Optional.of(joystick::getX),
             Optional.of(joystick::getX),
-            Optional.of(joystick::getZ)).withDeadline(autoAlignEnd()));
-    joystick.button(12).onTrue(
+            Optional.of(joystick::getZ)).withDeadline(autoAlignEnd())));
+    joystick.button(12).onTrue(wrapLED(
         driveTrain.autoAlignChooseSetpoint(false,
             Optional.of(joystick::getX),
             Optional.of(joystick::getX),
-            Optional.of(joystick::getZ)).withDeadline(autoAlignEnd()));
+            Optional.of(joystick::getZ)).withDeadline(autoAlignEnd())));
 
     // joystick.povRight().onTrue(Wrist.runSysIdRoutine());
     // elevator.atZeroNeedReset.onTrue(elevator.zero());
@@ -175,7 +182,7 @@ public class Robot extends TimedRobot {
         Commands.sequence(
             Commands.waitUntil(elevator.atSetpoint(ElevatorState.Handoff).negate()),
             Commands.waitUntil(elevator.atSetpoint(ElevatorState.Handoff))),
-        Commands.waitUntil(joystick.button(10)));
+        Commands.waitUntil(joystick.povUp()));
   }
 
   /**
@@ -263,7 +270,9 @@ public class Robot extends TimedRobot {
         Optional.empty(), Optional.empty()).until(driveTrain.atSetpointSource)
         .andThen(intake());
   }
-
+  public Command wrapLED(Command move) {
+    return led.setFastRainbow().andThen(move).andThen(led.setDefault());
+  }
   /** This function is called once each time the robot enters Disabled mode. */
   @Override
   public void disabledInit() {
