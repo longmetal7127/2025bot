@@ -24,6 +24,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
 import edu.wpi.first.wpilibj2.command.button.CommandJoystick;
 import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
 import frc.robot.constants.Constants;
@@ -119,9 +120,10 @@ public class Robot extends TimedRobot {
     take.hasCoral.negate().and(RobotModeTriggers.disabled().negate()).onTrue(led.setDefault());
 
     Epilogue.bind(this);
-        var fileBackend = new FileBackend(DataLogManager.getLog());
-     var epilogueConfig = Epilogue.getConfig();
-     epilogueConfig.backend = EpilogueBackend.multi(fileBackend, new NTEpilogueBackend(NetworkTableInstance.getDefault()));
+    var fileBackend = new FileBackend(DataLogManager.getLog());
+    var epilogueConfig = Epilogue.getConfig();
+    epilogueConfig.backend = EpilogueBackend.multi(fileBackend,
+        new NTEpilogueBackend(NetworkTableInstance.getDefault()));
   }
 
   public void configureBindingsSysid() {
@@ -174,6 +176,9 @@ public class Robot extends TimedRobot {
     // elevator.atZeroNeedReset.onTrue(elevator.zero());
     joystick.button(13).onTrue(elevator.setSetpointCommand(ElevatorState.Zeroing).until(elevator.basicallyNotMoving)
         .andThen(elevator.zero()).withTimeout(14).andThen(elevator.elevatorToPosition(ElevatorState.Handoff)));
+        RobotModeTriggers.autonomous().and(driveTrain.atSetpointAuto.negate()).onTrue(led.setFastRainbow()).onFalse(led.setDefault());
+        RobotModeTriggers.autonomous().and(driveTrain.atSetpointAuto).onTrue(led.setGreen()).onFalse(led.setDefault());
+
   }
 
   public Command autoAlignEnd() {
@@ -209,15 +214,7 @@ public class Robot extends TimedRobot {
   }
 
   public Supplier<Command> onePiece(DriveSetpoints setpoint) {
-    return () -> {
-      return driveTrain
-          .autoAlign(() -> setpoint, Optional.empty(), Optional.empty(), Optional.empty())
-          .until(driveTrain.atSetpointAuto)
-          .andThen(Wrist.wristToPosition(WristState.Safe))
-          .andThen(elevator.elevatorToPosition(ElevatorState.Level4))
-          .andThen(Wrist.wristToPosition(WristState.Level4))
-          .andThen(shootNote());
-    };
+    return ()-> {return reefCycle(setpoint, ElevatorState.Level4, WristState.Level4);};
   }
 
   public Command test() {
@@ -251,28 +248,29 @@ public class Robot extends TimedRobot {
   };
 
   public Command reefCycle(DriveSetpoints driveSetpoint, ElevatorState elevatorSetpoint, WristState wristState) {
-    return driveTrain.autoAlign(
+    return new SequentialCommandGroup(driveTrain.autoAlign(
         () -> driveSetpoint,
         Optional.empty(),
         Optional.empty(),
-        Optional.empty()).until(driveTrain.atSetpointAuto).alongWith(
-            sequence(
+        Optional.empty()).until(driveTrain.atSetpointAuto), driveTrain.stop()).alongWith(
+            Commands.sequence(
                 Commands.waitUntil(driveTrain.almostAtSetpoint),
                 Wrist.wristToPosition(WristState.Safe),
                 elevator.elevatorToPosition(elevatorSetpoint),
-                Commands.waitUntil(driveTrain.atSetpoint),
+                Commands.waitUntil(driveTrain.atSetpointAuto),
                 shootNote()));
 
   }
 
   public Command sourceIntake(boolean left) {
-    return driveTrain.autoAlign(() -> left ? DriveSetpoints.LEFT_HP : DriveSetpoints.RIGHT_HP, Optional.empty(),
-        Optional.empty(), Optional.empty()).until(driveTrain.atSetpointSource)
-        .alongWith(sequence(waitUntil(driveTrain.almostAtSetpoint.negate()),
+    return new SequentialCommandGroup(
+        driveTrain.autoAlign(() -> left ? DriveSetpoints.LEFT_HP : DriveSetpoints.RIGHT_HP, Optional.empty(),
+            Optional.empty(), Optional.empty()).until(take.hasCoral.or(driveTrain.atSetpointSource)),
+        driveTrain.stop())
+        .alongWith(Commands.sequence(Commands.waitUntil(driveTrain.almostAtSetpoint.negate()),
             Wrist.wristToPosition(WristState.Safe),
             elevator.elevatorToPosition(ElevatorState.Handoff),
             Wrist.setSetpointCommand(WristState.Handoff),
-            Commands. waitUntil(driveTrain.atSetpointSource),
             intake()
 
         ));
@@ -281,6 +279,7 @@ public class Robot extends TimedRobot {
   public Command wrapLED(Command move) {
     return led.setFastRainbow().andThen(move).andThen(led.setDefault());
   }
+
   /** This function is called once each time the robot enters Disabled mode. */
   @Override
   public void disabledInit() {

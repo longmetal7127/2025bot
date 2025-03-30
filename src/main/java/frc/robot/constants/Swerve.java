@@ -149,7 +149,7 @@ public class Swerve {
 
       public static final double kP = 4.8;
       public static final double kI = 0.0;
-      public static final double kD = 0.2;
+      public static final double kD = 0.06;
     }
 
     public static final class kRotation {
@@ -230,8 +230,8 @@ public class Swerve {
     K(FiducialPoseEstimator.tagLayout.getTagPose(19).get(), true),
     L(FiducialPoseEstimator.tagLayout.getTagPose(19).get(), false),
     // PROCESSOR(Pose2d.kZero),
-    LEFT_HP(new Pose2d(1.24, 7.18, Rotation2d.fromDegrees(125.989 + 180))),
-    RIGHT_HP(new Pose2d(1.22, 0.90, Rotation2d.fromDegrees(125.989 + 180).unaryMinus()));
+    LEFT_HP(new Pose2d(1.24 - Units.inchesToMeters(12), 7.18+ Units.inchesToMeters(12), Rotation2d.fromDegrees(125.989 + 180))),
+    RIGHT_HP(new Pose2d(1.22 - Units.inchesToMeters(12), 0.90+ Units.inchesToMeters(12), Rotation2d.fromDegrees(125.989 + 180).unaryMinus()));
 
     private final Pose2d pose;
 

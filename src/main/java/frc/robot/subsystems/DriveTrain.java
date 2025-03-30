@@ -126,7 +126,7 @@ public class DriveTrain extends SubsystemBase {
   public Trigger atSetpointSource = new Trigger(() -> xErr() <= 0.04 && yErr() <= 0.04 && aErr() <= 3);
   public Trigger almostAtSetpoint = new Trigger(
       () -> {
-        return getPose().minus(setpoint.getPose()).getTranslation().getNorm() < 1;
+        return getPose().minus(setpoint.getPose()).getTranslation().getNorm() < 1.5;
       });
 
   /** Creates a new DriveSubsystem. */
@@ -612,6 +612,11 @@ public class DriveTrain extends SubsystemBase {
   public static Translation2d normalize(final Translation2d translation) {
     var magnitude = translation.getNorm();
     return new Translation2d(translation.getX() / magnitude, translation.getY() / magnitude);
+  }
+  public Command stop() {
+    return runOnce(()-> {
+      this.setChassisSpeeds(new ChassisSpeeds(0,0,0));
+    });
   }
 
 }
