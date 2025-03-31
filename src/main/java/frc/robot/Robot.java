@@ -27,6 +27,7 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
 import edu.wpi.first.wpilibj2.command.button.CommandJoystick;
 import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
+import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.constants.Constants;
 import frc.robot.constants.Swerve.DriveSetpoints;
 import frc.robot.subsystems.DriveTrain;
@@ -109,7 +110,34 @@ public class Robot extends TimedRobot {
     autoChooser.addCmd("Three piece Right", this::threePieceRight);
     autoChooser.addCmd("test", this::test);
 
+    autoChooser.addCmd(
+        "Drive Translation SysId (Quasistatic Forward)",
+        () -> driveTrain.sysIdTranslationQuasistatic(SysIdRoutine.Direction.kForward));
+    autoChooser.addCmd(
+        "Drive Translation SysId (Quasistatic Reverse)",
+        () -> driveTrain.sysIdTranslationQuasistatic(SysIdRoutine.Direction.kReverse));
+    autoChooser.addCmd(
+        "Drive Translation SysId (Dynamic Forward)",
+        () -> driveTrain.sysIdTranslationDynamic(SysIdRoutine.Direction.kForward));
+    autoChooser.addCmd(
+        "Drive Translation SysId (Dynamic Reverse)",
+        () -> driveTrain.sysIdTranslationDynamic(SysIdRoutine.Direction.kReverse));
+
+    autoChooser.addCmd(
+        "Drive Steer SysId (Quasistatic Forward)",
+        () -> driveTrain.sysIdSteerQuasistatic(SysIdRoutine.Direction.kForward));
+    autoChooser.addCmd(
+        "Drive Steer SysId (Quasistatic Reverse)",
+        () -> driveTrain.sysIdSteerQuasistatic(SysIdRoutine.Direction.kReverse));
+    autoChooser.addCmd(
+        "Drive Steer SysId (Dynamic Forward)",
+        () -> driveTrain.sysIdSteerDynamic(SysIdRoutine.Direction.kForward));
+    autoChooser.addCmd(
+        "Drive Steer SysId (Dynamic Reverse)",
+        () -> driveTrain.sysIdSteerDynamic(SysIdRoutine.Direction.kReverse));
+
     SmartDashboard.putData("Auto Chooser", autoChooser);
+
     RobotModeTriggers.autonomous().whileTrue(autoChooser.selectedCommandScheduler());
 
     driveTrain.setDefaultCommand(driveTrain.joystickDrive(joystick::getX, joystick::getY, joystick::getZ,
@@ -176,8 +204,9 @@ public class Robot extends TimedRobot {
     // elevator.atZeroNeedReset.onTrue(elevator.zero());
     joystick.button(13).onTrue(elevator.setSetpointCommand(ElevatorState.Zeroing).until(elevator.basicallyNotMoving)
         .andThen(elevator.zero()).withTimeout(14).andThen(elevator.elevatorToPosition(ElevatorState.Handoff)));
-        RobotModeTriggers.autonomous().and(driveTrain.atSetpointAuto.negate()).onTrue(led.setFastRainbow()).onFalse(led.setDefault());
-        RobotModeTriggers.autonomous().and(driveTrain.atSetpointAuto).onTrue(led.setGreen()).onFalse(led.setDefault());
+    RobotModeTriggers.autonomous().and(driveTrain.atSetpointAuto.negate()).onTrue(led.setFastRainbow())
+        .onFalse(led.setDefault());
+    RobotModeTriggers.autonomous().and(driveTrain.atSetpointAuto).onTrue(led.setGreen()).onFalse(led.setDefault());
 
   }
 
@@ -214,7 +243,9 @@ public class Robot extends TimedRobot {
   }
 
   public Supplier<Command> onePiece(DriveSetpoints setpoint) {
-    return ()-> {return reefCycle(setpoint, ElevatorState.Level4, WristState.Level4);};
+    return () -> {
+      return reefCycle(setpoint, ElevatorState.Level4, WristState.Level4);
+    };
   }
 
   public Command test() {

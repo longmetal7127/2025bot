@@ -4,6 +4,8 @@
 
 package frc.robot.subsystems;
 
+import static edu.wpi.first.units.Units.*;
+
 import java.util.Optional;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
@@ -37,6 +39,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
+import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.Robot;
 import frc.robot.constants.Constants.OperatorConstants;
 import frc.robot.constants.Swerve;
@@ -80,6 +83,21 @@ public class DriveTrain extends SubsystemBase {
   private SlewRateLimiter accelfilteryL4 = new SlewRateLimiter(0.75);
 
   public DriveSetpoints setpoint = DriveSetpoints.A;
+  public SysIdRoutine sysIdTranslation = new SysIdRoutine(
+      new SysIdRoutine.Config(
+          Volts.of(0.5).per(Second),
+          Volts.of(2.5),
+          Seconds.of(7.5),
+          null),
+      new SysIdRoutine.Mechanism(
+          (voltage) -> runTranslationCharacterization(voltage.in(Volts)), null, this));
+  public SysIdRoutine sysIdSteer = new SysIdRoutine(
+      new SysIdRoutine.Config(
+          null,
+          null,
+          null),
+      new SysIdRoutine.Mechanism(
+          (voltage) -> runTurnCharacterization(voltage.in(Volts)), null, this));
 
   // The gyro sensor
   public final AHRS m_gyro = new AHRS(AHRS.NavXComType.kUSB1);
@@ -128,11 +146,10 @@ public class DriveTrain extends SubsystemBase {
       () -> {
         return getPose().minus(setpoint.getPose()).getTranslation().getNorm() < 3.25;
       });
-      public Trigger reallyAlmostAtSetpoint = new Trigger(
-        () -> {
-          return getPose().minus(setpoint.getPose()).getTranslation().getNorm() < 1.2;
-        });
-  
+  public Trigger reallyAlmostAtSetpoint = new Trigger(
+      () -> {
+        return getPose().minus(setpoint.getPose()).getTranslation().getNorm() < 1.2;
+      });
 
   /** Creates a new DriveSubsystem. */
   public DriveTrain() {
@@ -277,7 +294,7 @@ public class DriveTrain extends SubsystemBase {
    */
   public void resetOdometry(Pose2d pose) {
     m_odometry.resetPosition(
-      m_gyro.getRotation2d(),
+        m_gyro.getRotation2d(),
         new SwerveModulePosition[] {
             m_frontLeft.getPosition(),
             m_frontRight.getPosition(),
@@ -329,6 +346,8 @@ public class DriveTrain extends SubsystemBase {
    * @param desiredStates The desired SwerveModule states.
    */
   public void setModuleStates(SwerveModuleState[] desiredStates) {
+    if (true)
+      return;
     SwerveDriveKinematics.desaturateWheelSpeeds(
         desiredStates,
         DriveConstants.kMaxSpeedMetersPerSecond);
@@ -338,6 +357,30 @@ public class DriveTrain extends SubsystemBase {
     m_rearRight.setDesiredState(desiredStates[3]);
     m_speedsRequested = DriveConstants.kDriveKinematics.toChassisSpeeds(desiredStates);
 
+  }
+
+  public Command sysIdSteerQuasistatic(SysIdRoutine.Direction direction) {
+    return run(() -> runTurnCharacterization(0.0))
+        .withTimeout(1.0)
+        .andThen(sysIdSteer.quasistatic(direction));
+  }
+
+  public Command sysIdSteerDynamic(SysIdRoutine.Direction direction) {
+    return run(() -> runTurnCharacterization(0.0))
+        .withTimeout(1.0)
+        .andThen(sysIdSteer.dynamic(direction));
+  }
+
+  public Command sysIdTranslationQuasistatic(SysIdRoutine.Direction direction) {
+    return run(() -> runTranslationCharacterization(0.0))
+        .withTimeout(1.0)
+        .andThen(sysIdTranslation.quasistatic(direction));
+  }
+
+  public Command sysIdTranslationDynamic(SysIdRoutine.Direction direction) {
+    return run(() -> runTranslationCharacterization(0.0))
+        .withTimeout(1.0)
+        .andThen(sysIdTranslation.dynamic(direction));
   }
 
   /** Resets the drive encoders to currently read a position of 0. */
@@ -561,11 +604,9 @@ public class DriveTrain extends SubsystemBase {
       repulsorFieldPlanner.setGoal(this.setpoint.getPose().getTranslation());
 
       var robotPose = getPose();
-      SwerveSample cmd = repulsorFieldPlanner.getCmd(
+      SwerveSample cmd = repulsorFieldPlanner.getSample(
           robotPose,
-          getChassisSpeeds(),
-          DriveConstants.kMaxSpeedMetersPerSecond,
-          true);
+          DriveConstants.kMaxSpeedMetersPerSecond);
 
       // Apply the trajectory with rotation adjustment
       SwerveSample adjustedSample = new SwerveSample(
@@ -618,10 +659,25 @@ public class DriveTrain extends SubsystemBase {
     var magnitude = translation.getNorm();
     return new Translation2d(translation.getX() / magnitude, translation.getY() / magnitude);
   }
+
   public Command stop() {
-    return runOnce(()-> {
-      this.setChassisSpeeds(new ChassisSpeeds(0,0,0));
+    return runOnce(() -> {
+      this.setChassisSpeeds(new ChassisSpeeds(0, 0, 0));
     });
+  }
+
+  public void runTranslationCharacterization(double volts) {
+    m_frontLeft.setDriveOpenLoop(volts);
+    m_frontRight.setDriveOpenLoop(volts);
+    m_rearLeft.setDriveOpenLoop(volts);
+    m_rearRight.setDriveOpenLoop(volts);
+  }
+
+  public void runTurnCharacterization(double volts) {
+    m_frontLeft.setTurnOpenLoop(volts);
+    m_frontRight.setTurnOpenLoop(volts);
+    m_rearLeft.setTurnOpenLoop(volts);
+    m_rearRight.setTurnOpenLoop(volts);
   }
 
 }
