@@ -219,8 +219,8 @@ public class RepulsorFieldPlanner {
 
   public static final List<Obstacle> WALLS =
       List.of(
-          new HorizontalObstacle(0.0, 2, true),
-          new HorizontalObstacle(Constants.FIELD_WIDTH_METERS, 1.4, false),
+          new HorizontalObstacle(-1.0, 2, true),
+          new HorizontalObstacle(Constants.FIELD_WIDTH_METERS + 1.0, 1.4, false),
           new VerticalObstacle(0.0, 2, true),
           new VerticalObstacle(Constants.FIELD_LENGTH_METERS, 1.4, false));
 

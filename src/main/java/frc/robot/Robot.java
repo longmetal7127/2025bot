@@ -218,24 +218,24 @@ public class Robot extends TimedRobot {
   }
 
   public Command test() {
-    return sourceIntake(false);
+    return sourceIntake(true);
   }
 
   public Command threePieceLeft() {
-    return reefCycle(DriveSetpoints.I, ElevatorState.Level4, WristState.Level4)
+    return reefCycle(DriveSetpoints.J, ElevatorState.Level4, WristState.Level4)
         .andThen(sourceIntake(true))
-        .andThen(reefCycle(DriveSetpoints.J, ElevatorState.Level4, WristState.Level4))
+        .andThen(reefCycle(DriveSetpoints.K, ElevatorState.Level4, WristState.Level4))
         .andThen(sourceIntake(true))
-        .andThen(reefCycle(DriveSetpoints.A, ElevatorState.Level4, WristState.Level4))
+        .andThen(reefCycle(DriveSetpoints.L, ElevatorState.Level4, WristState.Level4))
         .andThen(sourceIntake(true));
   }
 
   public Command threePieceRight() {
     return reefCycle(DriveSetpoints.E, ElevatorState.Level4, WristState.Level4)
         .andThen(sourceIntake(false))
-        .andThen(reefCycle(DriveSetpoints.F, ElevatorState.Level4, WristState.Level4))
+        .andThen(reefCycle(DriveSetpoints.D, ElevatorState.Level4, WristState.Level4))
         .andThen(sourceIntake(false))
-        .andThen(reefCycle(DriveSetpoints.B, ElevatorState.Level4, WristState.Level4))
+        .andThen(reefCycle(DriveSetpoints.C, ElevatorState.Level4, WristState.Level4))
         .andThen(sourceIntake(false));
   }
 
@@ -256,8 +256,9 @@ public class Robot extends TimedRobot {
             Commands.sequence(
                 Commands.waitUntil(driveTrain.almostAtSetpoint),
                 Wrist.wristToPosition(WristState.Safe),
-                elevator.elevatorToPosition(elevatorSetpoint),
+                elevator.setSetpointCommand(elevatorSetpoint),
                 Commands.waitUntil(driveTrain.atSetpointAuto),
+                Commands.waitUntil(elevator.atSetpoint),
                 shootNote()));
 
   }
@@ -267,7 +268,7 @@ public class Robot extends TimedRobot {
         driveTrain.autoAlign(() -> left ? DriveSetpoints.LEFT_HP : DriveSetpoints.RIGHT_HP, Optional.empty(),
             Optional.empty(), Optional.empty()).until(take.hasCoral.or(driveTrain.atSetpointSource)),
         driveTrain.stop())
-        .alongWith(Commands.sequence(Commands.waitUntil(driveTrain.almostAtSetpoint.negate()),
+        .alongWith(Commands.sequence(Commands.waitUntil(driveTrain.reallyAlmostAtSetpoint.negate()),
             Wrist.wristToPosition(WristState.Safe),
             elevator.elevatorToPosition(ElevatorState.Handoff),
             Wrist.setSetpointCommand(WristState.Handoff),
