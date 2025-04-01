@@ -317,7 +317,7 @@ public class RepulsorFieldPlanner {
     var err = curTrans.minus(goal);
 
     DogLog.log("Repulsor/err", curTrans.getDistance(goal));
-    double slowdownDist = 1;
+    double slowdownDist = 0.75;
     if (err.getNorm() < slowdownDist) { // slow down 1 meter out
       stepSize_m = MathUtil.interpolate(0, maxSpeed * 0.02, err.getNorm() / slowdownDist);
     } else {

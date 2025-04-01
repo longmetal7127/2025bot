@@ -32,6 +32,12 @@ import edu.wpi.first.math.kinematics.SwerveDriveOdometry;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.util.Units;
+import edu.wpi.first.units.measure.MutAngle;
+import edu.wpi.first.units.measure.MutAngularVelocity;
+import edu.wpi.first.units.measure.MutDistance;
+import edu.wpi.first.units.measure.MutLinearVelocity;
+import edu.wpi.first.units.measure.MutVelocity;
+import edu.wpi.first.units.measure.MutVoltage;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
@@ -83,6 +89,14 @@ public class DriveTrain extends SubsystemBase {
   private SlewRateLimiter accelfilteryL4 = new SlewRateLimiter(0.75);
 
   public DriveSetpoints setpoint = DriveSetpoints.A;
+  private final MutVoltage m_appliedVoltage = Volts.mutable(0);
+  // Mutable holder for unit-safe linear distance values, persisted to avoid
+  // reallocation.
+  private final MutDistance m_angle = Meters.mutable(0);
+  // Mutable holder for unit-safe linear velocity values, persisted to avoid
+  // reallocation.
+  private final MutLinearVelocity m_velocity = MetersPerSecond.mutable(0);
+
   public SysIdRoutine sysIdTranslation = new SysIdRoutine(
       new SysIdRoutine.Config(
           Volts.of(0.5).per(Second),
@@ -90,7 +104,16 @@ public class DriveTrain extends SubsystemBase {
           Seconds.of(7.5),
           null),
       new SysIdRoutine.Mechanism(
-          (voltage) -> runTranslationCharacterization(voltage.in(Volts)), null, this));
+          (voltage) -> runTranslationCharacterization(voltage.in(Volts)), log -> {
+            // Record a frame for the shooter motor.
+            log.motor("drive")
+                .voltage(
+                    Volts
+                        .of(m_frontLeft.m_drivingSpark.getAppliedOutput() * m_frontLeft.m_drivingSpark.getBusVoltage()))
+                .linearPosition(m_angle.mut_replace(m_frontLeft.m_drivingSpark.getEncoder().getPosition(), Meters))
+                .linearVelocity(
+                    m_velocity.mut_replace(m_frontLeft.m_drivingSpark.getEncoder().getVelocity(), MetersPerSecond));
+          }, this));
   public SysIdRoutine sysIdSteer = new SysIdRoutine(
       new SysIdRoutine.Config(
           null,
@@ -139,9 +162,9 @@ public class DriveTrain extends SubsystemBase {
       AutoConstants.kRotation.kP,
       AutoConstants.kRotation.kI,
       AutoConstants.kRotation.kD);
-  public Trigger atSetpoint = new Trigger(() -> xErr() <= 0.02 && yErr() <= 0.02 && aErr() <= 1);
-  public Trigger atSetpointAuto = new Trigger(() -> xErr() <= 0.035 && yErr() <= 0.035 && aErr() <= 3);
-  public Trigger atSetpointSource = new Trigger(() -> xErr() <= 0.04 && yErr() <= 0.04 && aErr() <= 3);
+  public Trigger atSetpoint = new Trigger(() -> xErr() <= 0.02 && yErr() <= 0.02 && rController.atSetpoint());
+  public Trigger atSetpointAuto = new Trigger(() -> xErr() <= 0.035 && yErr() <= 0.035 && rController.atSetpoint());
+  public Trigger atSetpointSource = new Trigger(() -> xErr() <= 0.03 && yErr() <= 0.03 && rController.atSetpoint());
   public Trigger almostAtSetpoint = new Trigger(
       () -> {
         return getPose().minus(setpoint.getPose()).getTranslation().getNorm() < 3.25;
@@ -154,6 +177,7 @@ public class DriveTrain extends SubsystemBase {
   /** Creates a new DriveSubsystem. */
   public DriveTrain() {
     rController.enableContinuousInput(-Math.PI, Math.PI);
+    rController.setTolerance(2);
     poseEstimator = new SwervePoseEstimator(
         Swerve.DriveConstants.kDriveKinematics,
         m_gyro.getRotation2d(),
@@ -200,9 +224,7 @@ public class DriveTrain extends SubsystemBase {
   }
 
   private double aErr() {
-    return Math.abs(
-        getPose().getRotation().getDegrees() - setpoint.getPose().getRotation().getDegrees())
-        % 360;
+    return getPose().getRotation().minus(setpoint.getPose().getRotation()).getDegrees();
   }
 
   private double xErr() {
@@ -346,8 +368,6 @@ public class DriveTrain extends SubsystemBase {
    * @param desiredStates The desired SwerveModule states.
    */
   public void setModuleStates(SwerveModuleState[] desiredStates) {
-    if (true)
-      return;
     SwerveDriveKinematics.desaturateWheelSpeeds(
         desiredStates,
         DriveConstants.kMaxSpeedMetersPerSecond);

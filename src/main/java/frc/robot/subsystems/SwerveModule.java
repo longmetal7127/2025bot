@@ -32,8 +32,8 @@ import frc.robot.constants.Swerve.ModuleConstants;
 @Logged
 public class SwerveModule {
 
-        private final SparkFlex m_drivingSpark;
-        private final SparkMax m_turningSpark;
+        public final SparkFlex m_drivingSpark;
+        public final SparkMax m_turningSpark;
         private final SparkFlexSim m_drivingSparkSim;
         private final SparkMaxSim m_turningSparkSim;
 
@@ -63,7 +63,7 @@ public class SwerveModule {
                         LinearSystemId.createDCMotorSystem(DCMotor.getNeo550(1), .0025,
                                         ModuleConstants.kTurningMotorReduction),
                         DCMotor.getNeo550(1));
-
+        public boolean sysid = false;
         /**
          * Constructs a SwerveModule and configures the driving and turning motor,
          * encoder, and PID controller. This configuration is specific to the REV
@@ -136,6 +136,7 @@ public class SwerveModule {
          * @param desiredState Desired state with speed and angle.
          */
         public void setDesiredState(SwerveModuleState desiredState) {
+                if(sysid) return;
                 // Apply chassis angular offset to the desired state.
                 SwerveModuleState correctedDesiredState = new SwerveModuleState();
                 correctedDesiredState.speedMetersPerSecond = desiredState.speedMetersPerSecond;
@@ -192,6 +193,7 @@ public class SwerveModule {
         }
 
         public void setDriveOpenLoop(double volts) {
+                sysid = true;
                 m_drivingSpark.setVoltage(volts);
                 m_turningClosedLoopController.setReference(
                                 0 + m_chassisAngularOffset,
@@ -200,6 +202,7 @@ public class SwerveModule {
         }
 
         public void setTurnOpenLoop(double volts) {
+                sysid = true;
                 m_turningSpark.setVoltage(volts);
                 m_drivingClosedLoopController.setReference(
                                 0,

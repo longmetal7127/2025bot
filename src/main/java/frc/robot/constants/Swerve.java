@@ -120,7 +120,7 @@ public class Swerve {
           .pid(0.04, 0, 0)
           .velocityFF(drivingVelocityFeedForward)
           .outputRange(-1, 1);
-
+      drivingConfig.signals.analogVoltageAlwaysOn(true).primaryEncoderPositionAlwaysOn(true).primaryEncoderVelocityAlwaysOn(true);
       turningConfig.idleMode(IdleMode.kBrake).smartCurrentLimit(20);
       turningConfig.absoluteEncoder
           // Invert the turning encoder, since the output shaft rotates in the opposite
@@ -147,7 +147,7 @@ public class Swerve {
 
     public static final class kTranslation {
 
-      public static final double kP = 4.8;
+      public static final double kP = 2.4;
       public static final double kI = 0.0;
       public static final double kD = 0.06;
     }
@@ -172,7 +172,7 @@ public class Swerve {
         double drivingFactor = ModuleConstants.kWheelDiameterMeters * Math.PI
             / ModuleConstants.kDrivingMotorReduction;
         double turningFactor = 2 * Math.PI;
-        double drivingVelocityFeedForward = 1 / ModuleConstants.kDriveWheelFreeSpeedRps;
+        double drivingVelocityFeedForward = 2.0548;
 
         drivingConfig
             .idleMode(IdleMode.kBrake)
@@ -230,8 +230,8 @@ public class Swerve {
     K(FiducialPoseEstimator.tagLayout.getTagPose(19).get(), true),
     L(FiducialPoseEstimator.tagLayout.getTagPose(19).get(), false),
     // PROCESSOR(Pose2d.kZero),
-    LEFT_HP(new Pose2d(1.24 - Units.inchesToMeters(20.24), 7.18+ Units.inchesToMeters(20.24), Rotation2d.fromDegrees(125.989 + 180))),
-    RIGHT_HP(new Pose2d(1.22 - Units.inchesToMeters(20.24), 0.90- Units.inchesToMeters(20.24), Rotation2d.fromDegrees(125.989 + 180).unaryMinus()));
+    LEFT_HP(new Pose2d(1.24, 7.18, Rotation2d.fromDegrees(125.989 + 180))),
+    RIGHT_HP(new Pose2d(1.22, 0.90, Rotation2d.fromDegrees(125.989 + 180).unaryMinus()));
 
     private final Pose2d pose;
 
