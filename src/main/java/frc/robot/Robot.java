@@ -297,10 +297,10 @@ public class Robot extends TimedRobot {
   public Command sourceIntake(boolean left) {
     return new SequentialCommandGroup(
         driveTrain.autoAlign(() -> left ? DriveSetpoints.LEFT_HP : DriveSetpoints.RIGHT_HP, Optional.empty(),
-            Optional.empty(), Optional.empty()).until(/*take.hasCoral.or*/(driveTrain.atSetpointSource)),
+            Optional.empty(), Optional.empty()).until(take.hasCoral.or(driveTrain.atSetpointSource)),
         driveTrain.stop())
         .alongWith(Commands.sequence(Commands.waitUntil(driveTrain.reallyAlmostAtSetpoint.negate()),
-            Wrist.wristToPosition(WristState.Safe),
+            Wrist.wristToPosition(WristState.Safe).unless(elevator.atSetpoint(ElevatorState.Level4)),
             elevator.elevatorToPosition(ElevatorState.Handoff),
             Wrist.setSetpointCommand(WristState.Handoff),
             intake()

@@ -108,7 +108,7 @@ public class Swerve {
       double drivingFactor = (ModuleConstants.kWheelDiameterMeters * Math.PI) /
           ModuleConstants.kDrivingMotorReduction;
       double turningFactor = 2 * Math.PI;
-      double drivingVelocityFeedForward = 1 / ModuleConstants.kDriveWheelFreeSpeedRps;
+      double drivingVelocityFeedForward = 2.0548;
 
       drivingConfig.idleMode(IdleMode.kBrake).smartCurrentLimit(50);
       drivingConfig.encoder
