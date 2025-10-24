@@ -14,6 +14,7 @@ import edu.wpi.first.epilogue.logging.EpilogueBackend;
 import edu.wpi.first.epilogue.logging.FileBackend;
 import edu.wpi.first.epilogue.logging.NTEpilogueBackend;
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.networktables.BooleanPublisher;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -82,7 +83,7 @@ public class Robot extends TimedRobot {
     SignalLogger.start();
     // DogLog.setOptions(new DogLogOptions().withCaptureDs(true));
     // DogLog.setPdh(pdh);
-
+    NetworkTableInstance.getDefault().getBooleanTopic("/photonvision/use_new_cscore_frametime").publish().set(true);
     autoFactory = new AutoFactory(
         driveTrain::getPose,
         driveTrain::resetOdometry,
@@ -212,7 +213,7 @@ public class Robot extends TimedRobot {
 
   public Command autoAlignEnd() {
     return Commands.race(
-        Commands.sequence(Commands.waitSeconds(0.04),Commands.waitUntil(driveTrain.atSetpoint)),
+        Commands.sequence(Commands.waitSeconds(0.04), Commands.waitUntil(driveTrain.atSetpoint)),
         Commands.sequence(
             Commands.waitUntil(elevator.atSetpoint(ElevatorState.Handoff).negate()),
             Commands.waitUntil(elevator.atSetpoint(ElevatorState.Handoff))),

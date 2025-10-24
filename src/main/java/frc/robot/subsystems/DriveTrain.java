@@ -207,7 +207,7 @@ public class DriveTrain extends SubsystemBase {
         poseEstimator::getEstimatedPosition, new Transform3d(
             Units.inchesToMeters(4.053308),
             Units.inchesToMeters(9.375),
-            Units.inchesToMeters(21.108355),
+            Units.inchesToMeters(21.108355 - 9.5),
             new Rotation3d(0, Units.degreesToRadians(10), 0))),
 
         new FiducialPoseEstimator(
@@ -218,7 +218,16 @@ public class DriveTrain extends SubsystemBase {
                 Units.inchesToMeters(12.676434),
                 Units.inchesToMeters(-12.438193),
                 Units.inchesToMeters(9.122468),
-                new Rotation3d(0, Units.degreesToRadians(-20), Units.degreesToRadians(20))))
+                new Rotation3d(0, Units.degreesToRadians(-20), Units.degreesToRadians(20)))),
+        new FiducialPoseEstimator(
+            "Cam_Back",
+            yawGetter,
+            poseEstimator::getEstimatedPosition, new Transform3d( 
+            Units.inchesToMeters(-3.144002),
+            Units.inchesToMeters(0),
+            Units.inchesToMeters(40.936371),
+                new Rotation3d(0, Units.degreesToRadians(-25), 0)))
+
     };
 
   }

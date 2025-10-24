@@ -69,9 +69,11 @@ public class FiducialPoseEstimator {
     private final ArrayList<Pose3d> tagsUsed = new ArrayList<>();
 
     public PoseEstimate[] poll() {
+        
         var results = camera.getAllUnreadResults();
 
         for (var result : results) {
+            System.out.println(name);
             poseEstimator
                     .update(result)
                     .ifPresent(
@@ -185,8 +187,9 @@ public class FiducialPoseEstimator {
         // Fall back to SolvePnP if key data is missing (position of tag and gyro yaw)
         var tagPoseOptional = tagLayout.getTagPose(tag.id());
         var gyroYaw = gyroYawGetter.get(estimate.timestamp());
+        System.out.println(tagPoseOptional.toString());
         if (tagPoseOptional.isEmpty() || gyroYaw == null) {
-            //System.out.println("isEmpty");
+            System.out.println("isEmpty");
             solvePnPEstimate(estimate);
             return;
         }
@@ -222,12 +225,12 @@ public class FiducialPoseEstimator {
 
         // Obviously bad data falls back to SolvePnP
         if (robotPose.getX() < 0 || robotPose.getX() > Constants.FIELD_LENGTH_METERS) {
-            //System.out.println("TRIG X");
+            System.out.println("TRIG X");
             solvePnPEstimate(estimate);
             return;
         }
         if (robotPose.getY() < 0 || robotPose.getY() > Constants.FIELD_WIDTH_METERS) {
-            //System.out.println("TRIG y");
+            System.out.println("TRIG y");
             solvePnPEstimate(estimate);
             return;
         }
@@ -265,19 +268,19 @@ public class FiducialPoseEstimator {
         }
         if (estimate.robotPoseEstimate().getX() < 0
                 || estimate.robotPoseEstimate().getX() > Constants.FIELD_LENGTH_METERS) {
-                    //System.out.println("X");
+                    System.out.println("X");
 
             return;
         }
         if (estimate.robotPoseEstimate().getY() < 0
                 || estimate.robotPoseEstimate().getY() > Constants.FIELD_WIDTH_METERS) {
-                    //System.out.println("Y");
+                    System.out.println("Y");
 
             return;
         }
         double maxAmbiguity = .4;
         if (estimate.tagsUsed().length == 1 && estimate.tagsUsed()[0].ambiguity() > maxAmbiguity) {
-            //System.out.println("Ambiguity");
+            System.out.println("Ambiguity");
 
             return;
         }
