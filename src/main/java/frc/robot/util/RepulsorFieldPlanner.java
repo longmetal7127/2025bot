@@ -25,22 +25,24 @@ public class RepulsorFieldPlanner {
 
     public abstract Force getForceAtPosition(Translation2d position, Translation2d target);
 
-    protected double distToForceMag(double dist) {
-      var forceMag = strength / (0.00001 + Math.abs(dist * dist));
+    protected double distToForceMag(double dist, double maxRange) {
+      if (Math.abs(dist) > maxRange) {
+        return 0;
+      }
+      if (MathUtil.isNear(0, dist, 1e-2)) {
+        dist = 1e-2;
+      }
+      var forceMag = strength / (dist * dist);
+      forceMag -= strength / (maxRange * maxRange);
       forceMag *= positive ? 1 : -1;
       return forceMag;
-    }
-
-    protected double distToForceMag(double dist, double falloff) {
-      var original = strength / (0.00001 + Math.abs(dist * dist));
-      var falloffMag = strength / (0.00001 + Math.abs(falloff * falloff));
-      return Math.max(original - falloffMag, 0) * (positive ? 1 : -1);
     }
   }
 
   static class PointObstacle extends Obstacle {
     Translation2d loc;
     double radius = 0.5;
+    double maxRange = 4.0;
 
     public PointObstacle(Translation2d loc, double strength, boolean positive) {
       super(strength, positive);
@@ -49,10 +51,10 @@ public class RepulsorFieldPlanner {
 
     public Force getForceAtPosition(Translation2d position, Translation2d target) {
       var dist = loc.getDistance(position);
-      if (dist > 4) {
+      if (dist > maxRange) {
         return new Force();
       }
-      var outwardsMag = distToForceMag(loc.getDistance(position) - radius);
+      var outwardsMag = distToForceMag(loc.getDistance(position) - radius, maxRange - radius);
       var initial = new Force(outwardsMag, position.minus(loc).getAngle());
       var theta = target.minus(position).getAngle().minus(position.minus(loc).getAngle());
       double mag = outwardsMag * Math.signum(Math.sin(theta.getRadians() / 2)) / 2;
@@ -68,6 +70,7 @@ public class RepulsorFieldPlanner {
   static class SnowmanObstacle extends Obstacle {
     Translation2d loc;
     double radius = 0.5;
+    double maxRange = 4.0;
 
     public SnowmanObstacle(Translation2d loc, double strength, double radius, boolean positive) {
       super(strength, positive);
@@ -76,12 +79,16 @@ public class RepulsorFieldPlanner {
     }
 
     public Force getForceAtPosition(Translation2d position, Translation2d target) {
+      var dist = loc.getDistance(position);
+      if (dist > maxRange) {
+        return new Force();
+      }
       var targetToLoc = loc.minus(target);
       var targetToLocAngle = targetToLoc.getAngle();
       // 1 meter away from loc, opposite target.
       var sidewaysCircle = new Translation2d(1, targetToLoc.getAngle()).plus(loc);
-      var sidewaysMag = distToForceMag(sidewaysCircle.getDistance(position));
-      var outwardsMag = distToForceMag(Math.max(0.01, loc.getDistance(position) - radius));
+      var sidewaysMag = distToForceMag(sidewaysCircle.getDistance(position), maxRange);
+      var outwardsMag = distToForceMag(Math.max(0.01, loc.getDistance(position) - radius), maxRange - radius);
       var initial = new Force(outwardsMag, position.minus(loc).getAngle());
 
       // flip the sidewaysMag based on which side of the goal-sideways circle the
@@ -96,27 +103,39 @@ public class RepulsorFieldPlanner {
 
   static class HorizontalObstacle extends Obstacle {
     double y;
+    double maxRange;
 
-    public HorizontalObstacle(double y, double strength, boolean positive) {
+    public HorizontalObstacle(double y, double strength, double maxRange, boolean positive) {
       super(strength, positive);
       this.y = y;
+      this.maxRange = maxRange;
     }
 
     public Force getForceAtPosition(Translation2d position, Translation2d target) {
-      return new Force(0, distToForceMag(y - position.getY(), 1));
+      var dist = Math.abs(position.getY() - y);
+      if (dist > maxRange) {
+        return new Force();
+      }
+      return new Force(0, distToForceMag(y - position.getY(), maxRange));
     }
   }
 
   static class VerticalObstacle extends Obstacle {
     double x;
+    double maxRange;
 
-    public VerticalObstacle(double x, double strength, boolean positive) {
+    public VerticalObstacle(double x, double strength, double maxRange, boolean positive) {
       super(strength, positive);
       this.x = x;
+      this.maxRange = maxRange;
     }
 
     public Force getForceAtPosition(Translation2d position, Translation2d target) {
-      return new Force(distToForceMag(x - position.getX(), 1), 0);
+      var dist = Math.abs(position.getX() - x);
+      if (dist > maxRange) {
+        return new Force();
+      }
+      return new Force(distToForceMag(x - position.getX(), maxRange), 0);
     }
   }
 
@@ -201,14 +220,14 @@ public class RepulsorFieldPlanner {
   public static final double GOAL_STRENGTH = 1.2;
 
   public static final List<Obstacle> FIELD_OBSTACLES = List.of(
-      new TeardropObstacle(Constants.BLUE_REEF, 1, 2.5, .83, 3, 2),
-      new TeardropObstacle(Constants.RED_REEF, 1, 2.5, .83, 3, 2));
+      new TeardropObstacle(Constants.BLUE_REEF, 1, 3, .85, 3, 2),
+      new TeardropObstacle(Constants.RED_REEF, 1, 3, .85, 3, 2));
 
   public static final List<Obstacle> WALLS = List.of(
-      new HorizontalObstacle(0.0, 2, true),
-      new HorizontalObstacle(Constants.FIELD_WIDTH_METERS, 1.4, false),
-      new VerticalObstacle(0.0, 2, true),
-      new VerticalObstacle(Constants.FIELD_LENGTH_METERS, 1.4, false));
+      new HorizontalObstacle(0.0, 0.5, .5, true),
+      new HorizontalObstacle(Constants.FIELD_WIDTH_METERS, 0.5, .5, false),
+      new VerticalObstacle(0.0, 0.5, .5, true),
+      new VerticalObstacle(Constants.FIELD_LENGTH_METERS, 0.5, .5, false));
 
   private List<Obstacle> fixedObstacles = new ArrayList<>();
   private Translation2d goal = Translation2d.kZero;
