@@ -88,7 +88,7 @@ public class RepulsorFieldPlanner {
       // 1 meter away from loc, opposite target.
       var sidewaysCircle = new Translation2d(1, targetToLoc.getAngle()).plus(loc);
       var sidewaysMag = distToForceMag(sidewaysCircle.getDistance(position), maxRange);
-      var outwardsMag = distToForceMag(Math.max(0.01, loc.getDistance(position) - radius), maxRange - radius);
+      var outwardsMag = distToForceMag(Math.max(1e-2, loc.getDistance(position) - radius), maxRange - radius);
       var initial = new Force(outwardsMag, position.minus(loc).getAngle());
 
       // flip the sidewaysMag based on which side of the goal-sideways circle the
